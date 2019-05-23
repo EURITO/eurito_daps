@@ -15,7 +15,7 @@ on `our GitHub repo`_, you will find complete documentation at our `Read the Doc
 
 .. _eurito: http://www.eurito.eu/
 .. _Read the Docs site: https://eurito_daps.readthedocs.io/
-.. _our GitHub repo: https://github.com/eurito
+.. _our GitHub repo: https://github.com/EURITO
 
 ..    :build-status:
 ..    :imagehttps://img.shields.io/travis/rtfd/readthedocs.org.svg?style=flat
@@ -28,16 +28,16 @@ on `our GitHub repo`_, you will find complete documentation at our `Read the Doc
     :target: https://eurito_daps.readthedocs.io/en/latest/?badge=latest
 
 
-.. |build| image:: https://travis-ci.org/eurito/eurito_daps.svg?branch=master
-    :target: https://travis-ci.org/eurito/eurito_daps
+.. |build| image:: https://travis-ci.org/EURITO/eurito_daps.svg?branch=master
+    :target: https://travis-ci.org/EURITO/eurito_daps
     :alt: Build Status (master)
     
 
-.. |docs (dev)| image:: https://readthedocs.org/projects/nesta/badge/?version=dev
+.. |docs (dev)| image:: https://readthedocs.org/projects/eurito_daps/badge/?version=dev
     :alt: Documentation Status
-    :target: https://nesta.readthedocs.io/en/latest/?badge=dev
+    :target: https://eurito_daps.readthedocs.io/en/latest/?badge=dev
 
 
-.. |build (dev)| image:: https://travis-ci.org/eurito/eurito_daps.svg?branch=dev
+.. |build (dev)| image:: https://travis-ci.org/EURITO/eurito_daps.svg?branch=dev
     :alt: Build Status (dev)
-    :target: https://travis-ci.org/eurito/eurito_daps
+    :target: https://travis-ci.org/EURITO/eurito_daps
