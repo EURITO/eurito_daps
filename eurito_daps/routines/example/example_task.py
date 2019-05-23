@@ -4,13 +4,18 @@ Batch Example
 An example of building a pipeline with batched tasks.
 '''
 
+from nesta.production.luigihacks.mysqldb import MySqlTarget
+from nesta.production.luigihacks.misctools import get_config
 from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
 from nesta.production.luigihacks import autobatch
+from nesta.production.orms.orm_utils import setup_es
+
+from eurito_daps.packages.utils import silo
 import luigi
 import datetime
 import json
 import time
-
+import os
 
 
 class SomeBatchTask(autobatch.AutoBatchTask):
@@ -39,15 +44,15 @@ class SomeBatchTask(autobatch.AutoBatchTask):
     def prepare(self):
         '''Prepare the batch job parameters'''
         # Create the index + mapping if required
-        es_mode = "dev" is not self.production else "prod"
+        es_mode = "dev" if self.test else "prod"
         es, es_config = setup_es(es_mode=es_mode, 
-                                 test_mode=not self.production, 
+                                 test_mode=self.test, 
                                  reindex_mode=self.reindex,
                                  dataset='example',
                                  aliases='example')
 
         # Open the input file
-        data = get("example")
+        data = silo.get("example")
         job_params = []
         for i, row in enumerate(data):
             params = {"aws_auth_region": es_config["region"],
@@ -77,12 +82,13 @@ class RootTask(luigi.WrapperTask):
     '''
     date = luigi.DateParameter(default=datetime.datetime.today())
     age_increment = luigi.IntParameter()
-    test = luigi.BoolParameter(default=True)
+    production = luigi.BoolParameter(default=False)
 
     def requires(self):
         '''Get the output from the batchtask'''
         return SomeBatchTask(date=self.date,
-                             production=not self.test
+                             age_increment=self.age_increment,
+                             test=not self.production,
                              batchable=find_filepath_from_pathstub("batchables/example/"),
                              job_def="py36_amzn1_image",
                              job_name="batch-example-%s" % self.date,
