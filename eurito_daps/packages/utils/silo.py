@@ -19,7 +19,7 @@ def s3_json_pointer(dataset, bucket, extension=".json"):
     return obj
 
 
-def get(dataset, bucket="eurito-inputs"):
+def get(dataset, bucket="eurito-data-inputs"):
     """Retrieve a json object from S3.
 
     Args:
@@ -35,7 +35,7 @@ def get(dataset, bucket="eurito-inputs"):
     return json.loads(_body.decode())
 
 
-def put(json_data, dataset, bucket="eurito-outputs"):
+def put(json_data, dataset, bucket="eurito-data-outputs"):
     """Persistify a json object to S3.
 
     Args:
