@@ -45,7 +45,9 @@ echo "Added $DEPCOUNTER objects to the environment"
 
 # Generate pip requirements
 pip install pipreqs &> /dev/null
-pipreqs run
+pipreqs --ignore scripts,schemas,docs,.travis,.git run
+sed -i '/nesta/d' run/requirements.txt
+
 
 # Zip it up and copy to s3
 echo "Will zip up the following environment:"
@@ -53,7 +55,7 @@ tree run/
 zip -r run.zip run/
 FILE_TIMESTAMP=run-$(date +%s%N).zip
 echo "Pushing to s3"
-aws s3 cp run.zip s3://nesta-batch/${FILE_TIMESTAMP}
+aws s3 cp run.zip s3://eurito-batch/${FILE_TIMESTAMP}
 
 # Tidy up
 rm run.zip

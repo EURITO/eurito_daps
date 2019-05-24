@@ -74,11 +74,12 @@ if __name__ == "__main__":
                         level=logging.INFO,
                         format="%(asctime)s:%(levelname)s:%(message)s")
 
-    es, es_config = setup_es(es_mode="dev", test_mode=True, reindex_mode=True, 
-                             dataset='example', 
-                             aliases='example')
-
     if 'BATCHPAR_outinfo' not in os.environ:
+        es, es_config = setup_es(es_mode="dev", test_mode=True, 
+                                 reindex_mode=True, 
+                                 dataset='example', 
+                                 aliases='example')
+
         #environ = {"AWSBATCHTEST": "",  ## << This means don't write to ES
         environ = {"BATCHPAR_aws_auth_region": es_config["region"],
                    "BATCHPAR_outinfo": es_config["host"],

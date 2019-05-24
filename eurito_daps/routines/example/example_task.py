@@ -16,7 +16,7 @@ import datetime
 import json
 import time
 import os
-
+import logging
 
 class SomeBatchTask(autobatch.AutoBatchTask):
     '''A set of batched tasks which increments the age of the muppets by 1 year.
@@ -71,7 +71,7 @@ class SomeBatchTask(autobatch.AutoBatchTask):
 
     def combine(self, job_params):
         '''Combine the outputs from the batch jobs'''
-        pass
+        self.output().touch()
 
 
 class RootTask(luigi.WrapperTask):
@@ -86,10 +86,12 @@ class RootTask(luigi.WrapperTask):
 
     def requires(self):
         '''Get the output from the batchtask'''
+        logging.getLogger().setLevel(logging.INFO)
         return SomeBatchTask(date=self.date,
                              age_increment=self.age_increment,
                              test=not self.production,
-                             batchable=find_filepath_from_pathstub("batchables/example/"),
+                             batchable=find_filepath_from_pathstub("batchables/example/some_task"),
+                             env_files=[find_filepath_from_pathstub("eurito_daps/eurito_daps/")],
                              job_def="py36_amzn1_image",
                              job_name="batch-example-%s" % self.date,
                              job_queue="HighPriority",

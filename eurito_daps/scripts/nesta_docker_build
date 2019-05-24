@@ -4,12 +4,12 @@ DKR_PKG_NAME=${1}
 THIS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 # Check whether the repository has been registered on AWS ECR
-aws ecr create-repository --repository-name --region eu-west-2 ${1} &> /dev/null
+aws ecr create-repository --repository-name --region eu-west-1 ${1} &> /dev/null
 STATUS=$?
 if [[ $STATUS -ne 0 && $STATUS -ne 255 ]];
 then
     echo $STATUS
-    aws ecr create-repository --repository-name --region eu-west-2 ${1}
+    aws ecr create-repository --repository-name --region eu-west-1 ${1}
     exit 1
 fi
 

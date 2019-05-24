@@ -11,6 +11,7 @@ RUN yum -y install findutils
 
 RUN yum install python -y
 RUN yum install python36 -y
+RUN yum install git -y
 
 ARG MEETUP_API_KEYS
 ENV MEETUP_API_KEYS=$MEETUP_API_KEYS
