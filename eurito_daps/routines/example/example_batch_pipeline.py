@@ -13,10 +13,9 @@ from nesta.production.orms.orm_utils import setup_es
 from eurito_daps.packages.utils import silo
 import luigi
 import datetime
-import json
-import time
 import os
 import logging
+
 
 class SomeBatchTask(autobatch.AutoBatchTask):
     '''A set of batched tasks which increments the age of the muppets by 1 year.
@@ -45,8 +44,8 @@ class SomeBatchTask(autobatch.AutoBatchTask):
         '''Prepare the batch job parameters'''
         # Create the index + mapping if required
         es_mode = "dev" if self.test else "prod"
-        es, es_config = setup_es(es_mode=es_mode, 
-                                 test_mode=self.test, 
+        es, es_config = setup_es(es_mode=es_mode,
+                                 test_mode=self.test,
                                  reindex_mode=self.reindex,
                                  dataset='example',
                                  aliases='example')
@@ -57,15 +56,15 @@ class SomeBatchTask(autobatch.AutoBatchTask):
         for i, row in enumerate(data):
             params = {"aws_auth_region": es_config["region"],
                       "outinfo": es_config["host"],
-                      "dataset" : "example",
+                      "dataset": "example",
                       "done": False,
                       "age_increment": self.age_increment,
-                      "start_index":i,
-                      "end_index":i+1,
+                      "start_index": i,
+                      "end_index": i + 1,
                       "out_type": es_config["type"],
                       "out_port": es_config["port"],
-                      "out_index":es_config["index"],
-                      "entity_type":"muppet"}
+                      "out_index": es_config["index"],
+                      "entity_type": "muppet"}
             job_params.append(params)
         return job_params
 
