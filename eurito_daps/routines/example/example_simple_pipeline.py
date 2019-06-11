@@ -66,7 +66,7 @@ class SimpleTask(luigi.Task):
         r.raise_for_status()
 
         results = r.json()['results']
-        for count, result in enumerate(results):
+        for count, result in enumerate(results, 1):
             print(f"***{result['name']} - {result['model']} - {result['manufacturer']}")
 
             if count > 1 and self.test:
