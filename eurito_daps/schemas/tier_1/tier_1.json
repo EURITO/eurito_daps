@@ -3,6 +3,7 @@
         "term": "firstName",
         "values": [
             "address",
+	    "age",
             "booleanFlag",
             "coordinate",
             "cost",

@@ -7,15 +7,21 @@ install:
   - pip install -r requirements.txt
   - pip install lxml
   - python -c "import sys; print(sys.path)"
-before_script:
-  - mkdir eurito_daps/config/
-  - echo -e "[mysqldb]\nx=1" > eurito_daps/config/mysqldb.config  # create dummy file with just the config x=1
-  - echo -e "[worker]\nx=1" > eurito_daps/config/luigi.cfg  # create dummy file for luigi
-  - echo -e "[crunchbase]\nuser_key=1" > eurito_daps/config/crunchbase.config  # create dummy file for crunchbase
-  - sudo rm -f /etc/boto.cfg
-  - mysql -e 'CREATE DATABASE production_tests;'
-  - mysql_upgrade -u root --force
+before_install:
+  - sudo systemctl unmask mysql.service
   - sudo service mysql restart
+  - sudo mysql -e "use mysql; update user set authentication_string=PASSWORD('') where User='root'; update user set plugin='mysql_native_password';FLUSH PRIVILEGES;"
+  - sudo mysql_upgrade -u root
+  - sudo service mysql restart
+before_script:
+  - mkdir eurito_daps/production/config/
+  - echo -e "[mysqldb]\nx=1" > eurito_daps/production/config/mysqldb.config  # create dummy file with just the config x=1
+  - echo -e "[worker]\nx=1" > eurito_daps/production/config/luigi.cfg  # create dummy file for luigi
+  - echo -e "[crunchbase]\nuser_key=1" > eurito_daps/production/config/crunchbase.config  # create dummy file for crunchbase
+  - sudo rm -f /etc/boto.cfg
+#   - mysql_upgrade -u root --force
+#   - sudo service mysql restart
+  - mysql -e 'CREATE DATABASE production_tests;'
 script:
   - ./.travis/run.sh
 env:
