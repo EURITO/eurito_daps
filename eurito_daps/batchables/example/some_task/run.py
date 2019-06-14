@@ -76,7 +76,7 @@ if __name__ == "__main__":
 
     if 'BATCHPAR_outinfo' not in os.environ:
         es, es_config = setup_es(es_mode="dev", test_mode=True, 
-                                 reindex_mode=True, 
+                                 drop_and_recreate=True, 
                                  dataset='example', 
                                  aliases='example')
 
