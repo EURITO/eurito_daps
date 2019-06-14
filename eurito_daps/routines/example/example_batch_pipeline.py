@@ -46,7 +46,7 @@ class SomeBatchTask(autobatch.AutoBatchTask):
         es_mode = "dev" if self.test else "prod"
         es, es_config = setup_es(es_mode=es_mode,
                                  test_mode=self.test,
-                                 reindex_mode=self.reindex,
+                                 drop_and_recreate=self.reindex,
                                  dataset='example',
                                  aliases='example')
 
