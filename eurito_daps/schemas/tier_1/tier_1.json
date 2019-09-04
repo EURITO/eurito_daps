@@ -31,11 +31,13 @@
         "term": "middleName",
         "values": [
             "abstract",
+	    "authors",
             "adminRegion",
             "ageDepRatioPercWorkAgePop",
             "alias",
             "arxivSubjectCategory",
             "birth",
+	    "categories",
             "capitalCity",
             "category",
             "city",

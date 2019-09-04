@@ -7,8 +7,6 @@
     {"tier_0": "journal_ref", "tier_1": "id_journalReference_article"},
     {"tier_0": "doi", "tier_1": "id_digitalObjectIdentifier_article"},
     {"tier_0": "abstract", "tier_1": "textBody_abstract_article"},
-    {"tier_0": "authors", "tier_1": "personName_of_author"},
-    {"tier_0": "msc_class", "tier_1": "id_mathSubjectClassification_article"},
-    {"tier_0": "categories", "tier_1": "id_arxivSubjectCategory_article"}
+    {"tier_0": "mag_authors", "tier_1": "terms_authors_article"},
+    {"tier_0": "categories", "tier_1": "terms_categories_article"}
 ]
-
