@@ -8,10 +8,10 @@ which simply increments a muppet's age by one unit.
 
 import os
 import logging
-from nesta.production.orms.orm_utils import load_json_from_pathstub
-from nesta.production.orms.orm_utils import setup_es
-from nesta.production.luigihacks.misctools import find_filepath_from_pathstub
-from nesta.production.luigihacks.elasticsearchplus import ElasticsearchPlus
+from nesta.core.orms.orm_utils import load_json_from_pathstub
+from nesta.core.orms.orm_utils import setup_es
+from nesta.core.luigihacks.misctools import find_filepath_from_pathstub
+from nesta.core.luigihacks.elasticsearchplus import ElasticsearchPlus
 from eurito_daps.packages.utils import silo
 
 

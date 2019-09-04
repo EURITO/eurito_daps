@@ -4,8 +4,8 @@ Simple Example
 An example of building a pipeline with just a wrapper task and a regular task.
 '''
 
-from nesta.production.luigihacks.mysqldb import MySqlTarget
-from nesta.production.luigihacks.misctools import get_config
+from nesta.core.luigihacks.mysqldb import MySqlTarget
+from nesta.core.luigihacks.misctools import get_config
 
 import luigi
 import datetime
