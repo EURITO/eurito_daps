@@ -1,3 +1,8 @@
+# Make neo4j nodes from py2neo
+# Make neo4j edges from py2neo
+# Iterate over cordis data to create nodes
+# Iterate over cordis data to create edges
+
 import logging
 import py2neo
 from sqlalchemy.orm import sessionmaker
@@ -8,6 +13,7 @@ from eurito_daps.production.ogms.cordis_h2020_ogm import Projects as ProjectsGra
 from eurito_daps.production.ogms.cordis_h2020_ogm import Programmes as ProgrammesGraph
 from nesta.core.orms.cordis_h2020_orm import Organizations as OrganizationsSQL
 from nesta.core.orms.cordis_h2020_orm import Projects as ProjectsSQL
+
 from nesta.core.orms.orm_utils import db_session, get_mysql_engine
 from nesta.core.luigihacks.misctools import get_config
 
