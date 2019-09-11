@@ -1,9 +1,11 @@
+from neo4j.exceptions import CypherError
+
 from py2neo import Graph, NodeMatcher
 from py2neo.data import Node, Relationship
 from sqlalchemy.inspection import inspect
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql.schema import ForeignKeyConstraint
-from nesta.core.orms.orm_utils import db_session, get_mysql_engine
+from nesta.core.orms.orm_utils import db_session_query, get_mysql_engine
 from nesta.core.orms.orm_utils import get_class_by_tablename, object_to_dict
 from nesta.core.orms.orm_utils import graph_session
 from nesta.core.luigihacks.misctools import get_config
@@ -11,12 +13,47 @@ from nesta.core.orms.cordis_orm import Base, Project
 import logging
 
 
+def flatten(data):
+    if type(data) is dict:
+        return flatten_dict(data)
+    elif type(data) is not list:
+        return data
+    types = set(type(row) for row in data)
+    if len(types) > 1:
+        raise TypeError(f'Mixed types ({types}) are not accepted')
+    try:
+        if next(iter(types)) is dict:
+            return flatten_json(data)
+    except StopIteration:
+        pass
+    return data
+
+
+def flatten_dict(row, keys=[('title',),
+                            ('street', 'city', 'postalCode')]):
+    flat = []
+    for ks in keys:
+        if not any(k in row for k in ks):
+            continue
+        flat = '\n'.join(row[k] for k in ks
+                         if k in row)
+        break
+    return flat
+
+
+def flatten_json(data, keys=[('title',),
+                             ('street', 'city', 'postal_code')]):
+    flat_data = [flatten_dict(row, keys) for row in data]
+    assert len(flat_data) == len(data)
+    return flat_data
+
+
 def retrieve_node(db, graph, parent, row, this):
     row = get_row(db, parent, row, this)
     (pk,) = inspect(parent).primary_key
     matcher = NodeMatcher(graph)
     return matcher.match(extract_name(parent.__tablename__),
-                      **{pk.name: row[pk.name]}).first()
+                         **{pk.name: row[pk.name]}).first()
 
 
 def extract_name(tablename):
@@ -36,15 +73,14 @@ def get_row(session, _class, row, this):
     this_value = row[this_pk.name]
     _row = session.query(_class).filter(pk == this_value).first()
     _row = object_to_dict(_row, shallow=True)
-    return {k: v for k, v in _row.items()
-            if type(v) not in (dict, list)}
+    return {k: flatten(v) for k, v in _row.items()}
 
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
     limit = None
-    
-    engine = get_mysql_engine('MYSQLDB', 'nesta', 'dev')
+
+    engine = get_mysql_engine('MYSQLDB', 'nesta', 'production')
     conf = get_config('neo4j.config', 'neo4j')
     gkwargs = dict(host=conf['host'], secure=True,
                    auth=(conf['user'], conf['password']))
@@ -71,11 +107,14 @@ if __name__ == '__main__':
             rel = f'HAS_{extract_name(_tablename).upper()}'
             parent = get_class_by_tablename(Base, _tablename)
 
-        with graph_session(**gkwargs) as tx, db_session(engine) as db:
-            for row in db.query(this).limit(limit):
+        with graph_session(**gkwargs) as tx:
+            for db, row in db_session_query(query=this,
+                                            engine=engine,
+                                            limit=limit):
                 row = object_to_dict(row, shallow=True)
-                row = {k: v for k, v in row.items()
-                       if type(v) not in (dict, list)}
+                row = {k: flatten(v) for k, v in row.items()}
+                #row = {k: v for k, v in row.items()
+                #       if type(v) not in (dict, list)}
                 obj = Node(entity_name, **row)
                 if rel is not None:
                     rel_props = {}
@@ -87,6 +126,8 @@ if __name__ == '__main__':
                                               row, this)
                     if proj_node is None or obj is None:
                         continue
+                    back_rel = Relationship(obj, 'HAS_PROJECT', proj_node)
+                    tx.create(back_rel)
                     obj = Relationship(proj_node, rel, obj, **rel_props)
                 else:
                     s = tx.graph.schema
@@ -100,4 +141,8 @@ if __name__ == '__main__':
                                                        pk.name)
                     else:
                         assert len(constrs[0]) == 1
-                tx.create(obj)
+                try:
+                    tx.create(obj)
+                except CypherError:
+                    print(obj)
+                    raise
