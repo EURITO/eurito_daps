@@ -11,37 +11,59 @@ from nesta.core.orms.cordis_orm import Base, Project
 import logging
 
 
-def orm_to_neo4j(db, tx, parent, row, this, rel):
-    row = flatten(row)
-    if rel is not None:
-        fwd_rel, back_rel = build_relationships(db=db, graph=tx.graph,
-                                                parent=parent, row=row,
-                                                this=this, rel=rel)
+def orm_to_neo4j(session, transaction, orm_instance,
+                 parent_orm=None, rel_name=None):
+    """Pipe a SqlAlchemy ORM instance (a 'row' of data)
+    to neo4j, inserting it as a node or relationship, as appropriate.
+
+    Args:
+        session (sqlalchemy.Session): SQL DB session.
+        transaction (py2neo.Transaction): Neo4j transaction
+        orm_instance (sqlalchemy.Base): Instance of a SqlAlchemy ORM
+        parent_orm (sqlalchemy.Base): Parent ORM to build relationship to
+        rel_name (str): Name of the relationship to be added to Neo4j
+    """
+    graph = transaction.graph
+    orm = get_class_by_tablename(Base, orm_instance.__tablename__)
+    data_row = flatten(orm_instance)
+
+    # Either neither are specified, or at least one is specified
+    assert ((rel_name is None and parent_orm is None) or   # neither
+            (rel_name is not None or parent_orm is not None))  # at least one
+
+    # Build a relationship if specified
+    if rel_name is not None:
+        fwd_rel, back_rel = build_relationships(session=session,
+                                                graph=graph,
+                                                orm=orm, parent_orm=parent_orm,
+                                                data_row=data_row,
+                                                rel_name=rel_name)
         # Both nodes in the relationship were found
         if (fwd_rel, back_rel) != (None, None):
-            tx.create(fwd_rel)
-            tx.create(back_rel)
+            transaction.create(fwd_rel)
+            transaction.create(back_rel)
+    # Otherwise create a single node, imposing constraints based on SQL FKs
     else:
-        set_constraints(this, tx.graph.schema)
-        tx.create(Node(extract_name(this.__tablename__), **row))
+        set_constraints(orm, graph.schema)
+        transaction.create(Node(extract_name(orm.__tablename__), **data_row))
 
 
-def build_relationships(db, graph, parent, row, this, rel):
-    # Case 1) `this` is a node
-    if parent is None:
-        this_node = Node(extract_name(this.__tablename__), **row)
+def build_relationships(session, graph, orm, parent_orm, data_row, rel_name):
+    # Case 1) `orm` is a node
+    if parent_orm is None:
+        this_node = Node(extract_name(orm.__tablename__), **data_row)
         rel_props = {}
     # Case 2) `this` is a relationship
     else:
-        this_node = retrieve_node(db, graph, parent, row, this)
-        rel_props = row
+        this_node = retrieve_node(session, graph, orm, parent_orm, data_row)
+        rel_props = data_row
     # Also retrieve the Project node from neo4j
-    proj_node = retrieve_node(db, tx.graph, Project, row, this)
+    proj_node = retrieve_node(session, graph, orm, Project, data_row)
     # If either node is not found, give up
     if proj_node is None or this_node is None:
         return None, None
     # Build a forward and backward relationship, wrt the project
-    relationship = Relationship(proj_node, rel, this_node, **rel_props)
+    relationship = Relationship(proj_node, rel_name, this_node, **rel_props)
     back_relationship = Relationship(this_node, 'HAS_PROJECT', proj_node)
     return relationship, back_relationship
 
@@ -125,11 +147,11 @@ def flatten_json(data, keys=[('title',),
     return flat_data
 
 
-def retrieve_node(db, graph, parent, row, this):
-    row = get_row(db, parent, row, this)
-    (pk,) = inspect(parent).primary_key
+def retrieve_node(session, graph, orm, parent_orm, data_row):
+    row = get_row(session, parent_orm, orm, data_row)
+    (pk,) = inspect(parent_orm).primary_key
     matcher = NodeMatcher(graph)
-    return matcher.match(extract_name(parent.__tablename__),
+    return matcher.match(extract_name(parent_orm.__tablename__),
                          **{pk.name: row[pk.name]}).first()
 
 
@@ -142,13 +164,13 @@ def table_from_fk(fks):
             if fk.column.table.name != 'cordis_projects'][0]
 
 
-def get_row(session, _class, row, this):
-    (pk,) = inspect(_class).primary_key
-    (this_pk,) = [c for c in this.__table__.columns
-                  for fk in c.foreign_keys
-                  if fk.column.table.name == _class.__tablename__]
-    this_value = row[this_pk.name]
-    _row = session.query(_class).filter(pk == this_value).first()
+def get_row(session, parent_orm, orm, data_row):
+    (pk,) = inspect(parent_orm).primary_key
+    (orm_pk,) = [c for c in orm.__table__.columns
+                 for fk in c.foreign_keys
+                 if fk.column.table.name == parent_orm.__tablename__]
+    condition = (pk == data_row[orm_pk.name])
+    _row = session.query(parent_orm).filter(condition).first()
     return flatten(_row)
 
 
@@ -171,9 +193,10 @@ if __name__ == '__main__':
     for tablename, table in Base.metadata.tables.items():
         entity_name = extract_name(tablename)
         logging.info(f'\tProcessing {entity_name}')
-        this, parent, rel = prepare_base_entities(table)
+        orm, parent_orm, rel_name = prepare_base_entities(table)
         with graph_session(**gkwargs) as tx:
-            for db, row in db_session_query(query=this, engine=engine,
-                                            limit=limit):
-                orm_to_neo4j(db=db, tx=tx, parent=parent,
-                             row=row, this=this, rel=rel)
+            for db, orm_instance in db_session_query(query=orm, engine=engine,
+                                                     limit=limit):
+                orm_to_neo4j(session=db, transaction=tx,
+                             orm_instance=orm_instance,
+                             parent_orm=parent_orm, rel_name=rel_name)
