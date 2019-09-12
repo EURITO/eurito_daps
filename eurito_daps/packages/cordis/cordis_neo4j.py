@@ -1,12 +1,7 @@
-from py2neo import Graph, NodeMatcher
+from py2neo import NodeMatcher
 from py2neo.data import Node, Relationship
 from sqlalchemy.inspection import inspect
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.sql.schema import ForeignKeyConstraint
-from nesta.core.orms.orm_utils import db_session_query, get_mysql_engine
 from nesta.core.orms.orm_utils import get_class_by_tablename, object_to_dict
-from nesta.core.orms.orm_utils import graph_session
-from nesta.core.luigihacks.misctools import get_config
 from nesta.core.orms.cordis_orm import Base, Project
 import logging
 
@@ -246,31 +241,3 @@ def get_row(session, parent_orm, orm, data_row):
     condition = (pk == data_row[orm_pk.name])
     _row = session.query(parent_orm).filter(condition).first()
     return flatten(_row)
-
-
-if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO)
-    limit = 10
-
-    engine = get_mysql_engine('MYSQLDB', 'nesta', 'production')
-    conf = get_config('neo4j.config', 'neo4j')
-    gkwargs = dict(host=conf['host'], secure=True,
-                   auth=(conf['user'], conf['password']))
-
-    with graph_session(**gkwargs) as tx:
-        logging.info('Dropping all previous data')
-        tx.graph.delete_all()
-        for constraint in tx.run('CALL db.constraints'):
-            logging.info(f'Dropping constraint {constraint[0]}')
-            tx.run(f'DROP {constraint[0]}')
-
-    for tablename, table in Base.metadata.tables.items():
-        entity_name = extract_name(tablename)
-        logging.info(f'\tProcessing {entity_name}')
-        orm, parent_orm, rel_name = prepare_base_entities(table)
-        with graph_session(**gkwargs) as tx:
-            for db, orm_instance in db_session_query(query=orm, engine=engine,
-                                                     limit=limit):
-                orm_to_neo4j(session=db, transaction=tx,
-                             orm_instance=orm_instance,
-                             parent_orm=parent_orm, rel_name=rel_name)
