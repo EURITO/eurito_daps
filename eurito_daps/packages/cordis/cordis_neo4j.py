@@ -19,7 +19,8 @@ def orm_to_neo4j(session, transaction, orm_instance,
     Args:
         session (sqlalchemy.Session): SQL DB session.
         transaction (py2neo.Transaction): Neo4j transaction
-        orm_instance (sqlalchemy.Base): Instance of a SqlAlchemy ORM
+        orm_instance (sqlalchemy.Base): Instance of a SqlAlchemy ORM, i.e.
+                                        a 'row' of data.
         parent_orm (sqlalchemy.Base): Parent ORM to build relationship to
         rel_name (str): Name of the relationship to be added to Neo4j
     """
@@ -35,9 +36,10 @@ def orm_to_neo4j(session, transaction, orm_instance,
     if rel_name is not None:
         fwd_rel, back_rel = build_relationships(session=session,
                                                 graph=graph,
-                                                orm=orm, parent_orm=parent_orm,
+                                                orm=orm,
                                                 data_row=data_row,
-                                                rel_name=rel_name)
+                                                rel_name=rel_name,
+                                                parent_orm=parent_orm)
         # Both nodes in the relationship were found
         if (fwd_rel, back_rel) != (None, None):
             transaction.create(fwd_rel)
@@ -48,7 +50,20 @@ def orm_to_neo4j(session, transaction, orm_instance,
         transaction.create(Node(extract_name(orm.__tablename__), **data_row))
 
 
-def build_relationships(session, graph, orm, parent_orm, data_row, rel_name):
+def build_relationships(session, graph, orm, data_row,
+                        rel_name, parent_orm=None):
+    """Build a py2neo.Relationship object from SqlAlchemy objects.x
+
+    Args:
+        session (sqlalchemy.Session): SQL DB session.
+        transaction (py2neo.Transaction): Neo4j transaction
+        orm (sqlalchemy.Base): A SqlAlchemy ORM
+        rel_name (str): Name of the relationship to be added to Neo4j
+        parent_orm (sqlalchemy.Base): Another ORM to build relationship to.
+                                      If this is not specified, it implies
+                                      that :obj:`orm` is node, rather than a
+                                      relationship.
+    """
     # Case 1) `orm` is a node
     if parent_orm is None:
         this_node = Node(extract_name(orm.__tablename__), **data_row)
@@ -69,16 +84,25 @@ def build_relationships(session, graph, orm, parent_orm, data_row, rel_name):
 
 
 def set_constraints(orm, graph_schema):
+    """Set constraints in the neo4j graph schema.
+
+    Args:
+        orm (sqlalchemy.Base): A SqlAlchemy ORM
+        graph_schema (py2neo.Graph.Schema): Neo4j graph schema.
+    """
+    # Retrieve constraints by entity name
     entity_name = extract_name(orm.__tablename__)
-    (pk,) = inspect(orm).primary_key
-    constrs = graph_schema.get_uniqueness_constraints(entity_name)
-    assert len(constrs) <= 1
+    constraints = graph_schema.get_uniqueness_constraints(entity_name)
+    # If no constraints have been applied, infer them from the PKs
     if len(constrs) == 0:
+        (pk,) = inspect(orm).primary_key  # Assume only one constraint
         logging.info('Creating constraint on '
                      f'{entity_name}.{pk.name}')
         graph_schema.create_uniqueness_constraint(entity_name,
                                                   pk.name)
+    # Otherwise don't re-register a constraint
     else:
+        # Check that the constraint is consistent with having only one PK
         assert len(constrs[0]) == 1
 
 
@@ -90,64 +114,100 @@ def prepare_base_entities(table):
         table (sqlalchemy.sql.Table): SQL alchemy table object from which
                                       to extract an graph representation.
     Returns:
-        {this, parent, rel} ({Base, Base, str}): Two ORMs and a string
-                                                 describing their relationship
+        {orm, parent_orm, rel_name}: Two ORMs and a string describing
+                                     their relationship
     """
-    fks = [fk for c in table.columns
-           if c.foreign_keys
+    # Retrieve foreign keys in order to infer a relationship
+    fks = [fk for c in table.columns if c.foreign_keys
            for fk in c.foreign_keys]
-    this = get_class_by_tablename(Base, table.name)
-    parent, rel = None, None
-    if len(fks) == 1:
-        rel = f'HAS_{entity_name.upper()}'
-    elif len(fks) == 2:
+    parent_orm, rel_name = None, None
+    if len(fks) == 1:  # The relationship points to this table
+        rel_name = f'HAS_{entity_name.upper()}'
+    elif len(fks) == 2:  # The relationship points to a parent
         _tablename = table_from_fk(fks)
-        rel = f'HAS_{extract_name(_tablename).upper()}'
-        parent = get_class_by_tablename(Base, _tablename)
-    return this, parent, rel
+        rel_name = f'HAS_{extract_name(_tablename).upper()}'
+        parent_orm = get_class_by_tablename(Base, _tablename)
+    # Retrieve the ORM for this table
+    orm = get_class_by_tablename(Base, table.name)
+    return orm, parent_orm, rel
 
 
-def flatten(row):
+def flatten(orm_instance):
+    """Convert a SqlAlchemy ORM (i.e. a 'row' of data) to flat JSON.
+
+    Args:
+        orm_instance (sqlalchemy.Base): Instance of a SqlAlchemy ORM, i.e.
+                                        a 'row' of data.
+    Returns:
+        row (dict): A flat row of data, inferred from `orm_instance`
+    """
     row = object_to_dict(row, shallow=True)
     return {k: _flatten(v) for k, v in row.items()}
 
 
 def _flatten(data):
+    """Flatten JSON to a flat dictionary via a hard-coded routine.
+
+    Args:
+        data (json-like): Input data.
+    Returns:
+        _data (dict): A flat dictionary.
+    """
+    # Flatten dictionaries directly
     if type(data) is dict:
         return flatten_dict(data)
+    # if not a dict or a list, just return unaltered
     elif type(data) is not list:
         return data
+    # Assume it is now a list. Check item types to determine next step.
     types = set(type(row) for row in data)
     if len(types) > 1:
         raise TypeError(f'Mixed types ({types}) are not accepted')
+    # Flatten the internal data if the item types are dict
     try:
         if next(iter(types)) is dict:
-            return flatten_json(data)
-    except StopIteration:
+            return [flatten_dict(row) for row in data]
+    except StopIteration:  # Implies empty list
         pass
+    # Otherwise don't flatten
     return data
 
 
 def flatten_dict(row, keys=[('title',),
                             ('street', 'city', 'postalCode')]):
-    flat = []
+    """Flatten a dict by concatenating matching keys
+
+    Args:
+        row (dict): Data to be flattened
+    Returns:
+        flat (str): Concatenated data.
+    """
+    flat = ''
     for ks in keys:
         if not any(k in row for k in ks):
             continue
         flat = '\n'.join(row[k] for k in ks
                          if k in row)
         break
+    if len(flat) == 0:
+        print(row)
+        assert False
     return flat
 
 
-def flatten_json(data, keys=[('title',),
-                             ('street', 'city', 'postal_code')]):
-    flat_data = [flatten_dict(row, keys) for row in data]
-    assert len(flat_data) == len(data)
-    return flat_data
-
-
 def retrieve_node(session, graph, orm, parent_orm, data_row):
+    """Retrieve an existing node from neo4j, by first retrieving it's
+    id (field name AND value) via SqlAlchemy.
+
+    Args:
+        session (sqlalchemy.Session): SQL DB session.
+        transaction (py2neo.Transaction): Neo4j transaction
+        orm (sqlalchemy.Base): SqlAlchemy ORM describing :obj:`data_row`
+        parent_orm (sqlalchemy.Base): Parent ORM to build relationship to
+        data_row (dict): Flat row of data retrieved from `orm`
+    Returns:
+        node (py2neo.Node): Node of data corresponding to data_row
+    """
     row = get_row(session, parent_orm, orm, data_row)
     (pk,) = inspect(parent_orm).primary_key
     matcher = NodeMatcher(graph)
@@ -156,15 +216,29 @@ def retrieve_node(session, graph, orm, parent_orm, data_row):
 
 
 def extract_name(tablename):
+    """Convert a Cordis tablename to it's Neo4j Node label"""
     return tablename.replace('cordis_', '')[:-1].title()
 
 
 def table_from_fk(fks):
+    """Get the table name of the fk constraint, ignoring
+    the cordis_projects table"""
     return [fk.column.table.name for fk in fks
             if fk.column.table.name != 'cordis_projects'][0]
 
 
 def get_row(session, parent_orm, orm, data_row):
+    """Retrieve a flat row of data corresponding to the parent
+    relation, inferred via foreign keys.
+
+    Args:
+        session (sqlalchemy.Session): SQL DB session.
+        parent_orm (sqlalchemy.Base): Parent ORM to build relationship to
+        orm (sqlalchemy.Base): SqlAlchemy ORM describing :obj:`data_row`
+        data_row (dict): Flat row of data retrieved from `orm`
+    Returns:
+        _row (dict): Flat row of data retrieved from `parent_orm`
+    """
     (pk,) = inspect(parent_orm).primary_key
     (orm_pk,) = [c for c in orm.__table__.columns
                  for fk in c.foreign_keys
