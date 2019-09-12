@@ -69,7 +69,7 @@ class CollectOpenAireTask(luigi.Task):
     def run(self):
         '''Collects records from OpenAIRE API and stores them into the 'dev' or 'production' database
         '''
-        base_url = 'http://api.openaire.eu/oai_pmh?verb=ListRecords'
+        baseUrl = 'http://api.openaire.eu/oai_pmh?verb=ListRecords'
 
         #engine = create_engine('sqlite:///pythonsqlite.db', echo=False)
 
@@ -86,17 +86,17 @@ class CollectOpenAireTask(luigi.Task):
         reqsession = requests.session()
         reqsession.keep_alive = False
 
-        resumption_token = 'Not None'
+        resumptionToken = 'Not None'
 
-        current_url = base_url + '&metadataPrefix=oaf&set=' + self.outputType
-        logging.info("Current URL:" + current_url)
+        currentUrl = baseUrl + '&metadataPrefix=oaf&set=' + self.outputType
+        logging.info("Current URL:" + currentUrl)
 
         count = 0
 
-        while resumption_token != 'None':
+        while resumptionToken != 'None':
 
             logging.info("Retrieving soup from URL...")
-            cur_soup = openaire_utils.get_soup_contents(current_url, reqsession)
+            cur_soup = openaire_utils.get_soup_contents(currentUrl, reqsession)
             logging.info("Soup returned...")
             logging.info(cur_soup)
 
@@ -108,10 +108,10 @@ class CollectOpenAireTask(luigi.Task):
                 time.sleep(10)
                 continue
 
-            #obtain resumption_token from soup and update the request url
-            resumption_token = openaire_utils.get_res_token(cur_soup)
-            current_url = base_url + '&resumption_token=' + resumption_token
-            logging.info ("Next URL: " + current_url)
+            #obtain resumptionToken from soup and update the request url
+            resumptionToken = openaire_utils.get_res_token(cur_soup)
+            currentUrl = baseUrl + '&resumptionToken=' + resumptionToken
+            logging.info ("Next URL: " + currentUrl)
 
             #parse records
             if self.outputType == 'software':
