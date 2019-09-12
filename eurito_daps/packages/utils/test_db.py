@@ -2,7 +2,7 @@
 '''
 
 from eurito_daps.packages.utils import openaire_utils
-from nesta.production.orms.orm_utils import get_mysql_engine
+from nesta.core.orms.orm_utils import get_mysql_engine
 
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
