@@ -89,7 +89,7 @@ def set_constraints(orm, graph_schema):
     entity_name = extract_name(orm.__tablename__)
     constraints = graph_schema.get_uniqueness_constraints(entity_name)
     # If no constraints have been applied, infer them from the PKs
-    if len(constrs) == 0:
+    if len(constraints) == 0:
         (pk,) = inspect(orm).primary_key  # Assume only one constraint
         logging.info('Creating constraint on '
                      f'{entity_name}.{pk.name}')
@@ -98,7 +98,7 @@ def set_constraints(orm, graph_schema):
     # Otherwise don't re-register a constraint
     else:
         # Check that the constraint is consistent with having only one PK
-        assert len(constrs[0]) == 1
+        assert len(constraints) == 1
 
 
 def prepare_base_entities(table):
@@ -117,14 +117,14 @@ def prepare_base_entities(table):
            for fk in c.foreign_keys]
     parent_orm, rel_name = None, None
     if len(fks) == 1:  # The relationship points to this table
-        rel_name = f'HAS_{entity_name.upper()}'
+        rel_name = f'HAS_{extract_name(table.name).upper()}'
     elif len(fks) == 2:  # The relationship points to a parent
         _tablename = table_from_fk(fks)
         rel_name = f'HAS_{extract_name(_tablename).upper()}'
         parent_orm = get_class_by_tablename(Base, _tablename)
     # Retrieve the ORM for this table
     orm = get_class_by_tablename(Base, table.name)
-    return orm, parent_orm, rel
+    return orm, parent_orm, rel_name
 
 
 def flatten(orm_instance):
@@ -136,7 +136,7 @@ def flatten(orm_instance):
     Returns:
         row (dict): A flat row of data, inferred from `orm_instance`
     """
-    row = object_to_dict(row, shallow=True)
+    row = object_to_dict(orm_instance, shallow=True)
     return {k: _flatten(v) for k, v in row.items()}
 
 
