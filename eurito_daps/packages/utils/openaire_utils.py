@@ -1,6 +1,6 @@
 from bs4 import BeautifulSoup
 import re
-from eurito_daps.production.orms import openaire_orm
+from eurito_daps.core.orms import openaire_orm
 from eurito_daps.packages.utils import globals
 
 
@@ -31,7 +31,9 @@ def find_project_in_db(in_project_code):
         in_project_code (int): EC 6-digit project code
     '''
 
-    records = globals.db_session.query(openaire_orm.ECProjectRecord).filter_by(project_code=in_project_code)
+    records = globals.db_session \
+                     .query(openaire_orm.ECProjectRecord) \
+                     .filter_by(project_code=in_project_code) \
 
     try:
         return records[0]
@@ -46,6 +48,11 @@ def write_records_to_db(records, output_type, db_session):
         output_type (str): type of record to be extracted from OpenAIRE API. Accepts "software", "datasets", "publications", "ECProjects"
         db_session (instance of sessionmaker Session): current database session
     '''
+
+    if output_type == "software":
+        is_software = True
+    else:
+        is_software = False
     #iterate through records
     for record in records:
 
@@ -53,7 +60,7 @@ def write_records_to_db(records, output_type, db_session):
         record_obj = get_record_object(record, output_type)
 
         #if software, find related EC projects and create relationship with related ECprojects via association table
-        if output_type == "software":
+        if is_software:
             record_obj = link_record_with_project(record, record_obj)
 
         #add object into database
@@ -75,7 +82,7 @@ def get_record_object(cur_record, output_type):
         return openaire_orm.ECProjectRecord(title=cur_record['title'], project_code=cur_record['projectcode'])
 
 
-def parse_software_soup_rt (cur_soup):
+def parse_soft (cur_soup):
     '''A utility function, which parses software records from XML and returns a list of records with software that are related to EC Projects
 
     Args:
@@ -83,7 +90,15 @@ def parse_software_soup_rt (cur_soup):
     '''
     output_list = list()
     results = cur_soup.find_all(re.compile("^oaf:result"))
-    for result in results:
+
+    return [{'project_codes': r.find('code'),
+         'pid': r.find('pid').text,
+         'title': r.find('title').text,
+         'creators': r.find_all('creators').text,}
+         for r in results
+         if r.find_all('code')] #if code tag exists, then it is related to EC project
+
+    '''for result in results:
 
         #check if related to EC projects
         project_codes = result.find_all('code')
@@ -105,9 +120,10 @@ def parse_software_soup_rt (cur_soup):
             out_obj['creators'] = creators
 
             output_list.append(out_obj)
-    return output_list
+    return output_list '''
 
-def parse_projects_soup_rt (cur_soup):
+
+def parse_proj (cur_soup):
     '''A utility function, which parses EC project records from XML, returns a list of records
 
     Args:
@@ -115,7 +131,8 @@ def parse_projects_soup_rt (cur_soup):
     '''
     output_list = list()
     results = cur_soup.find_all(re.compile("^oaf:project"))
-    for result in results:
+
+    '''for result in results:
         out_obj = dict()
 
         title = result.find('title')
@@ -127,7 +144,11 @@ def parse_projects_soup_rt (cur_soup):
         out_obj['projectcode'] = project_code.text
 
         output_list.append(out_obj)
-    return output_list
+    return output_list '''
+
+    return [{'title': r.find('title').text,
+         'project_code': r.find('code').text}
+         for r in results]
 
 
 def get_res_token(soup):
@@ -148,7 +169,7 @@ def get_res_token(soup):
     else:
         return 'None'
 
-def get_soup_contents(currentUrl, reqsession):
+def get_soup_contents(currentUrl, reqsession, output_type, resumption_token):
     '''A utility function, which returns BeautifulSoup content in XML format from the given URL
 
     Args:
@@ -156,7 +177,14 @@ def get_soup_contents(currentUrl, reqsession):
         reqsession (instance of Requests session): currently open HTTP request
     '''
 
-    response = reqsession.get(currentUrl)
-    soup = BeautifulSoup(response.content, 'lxml')
-    response.close()
-    return soup
+    for x in range(0, 9):
+        #requests.get(url, params={'metadataPrefix':'oaf', 'set':output_type})
+        response = reqsession.get(currentUrl, params={'metadataPrefix': 'oaf', 'set': output_type, 'resumption_token': resumption_token})
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.content, 'lxml')
+            response.close()
+            return soup
+        else:
+            logging.info("Service unavailable, waiting 10 seconds and trying again")
+            time.sleep(10)
+            continue
