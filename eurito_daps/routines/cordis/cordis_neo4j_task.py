@@ -37,7 +37,7 @@ class CordisNeo4jTask(luigi.Task):
 
     def run(self):
         limit = 100 if self.test else None
-        flush_freq = 33 if self.test else 10000
+        flush_freq = 33 if self.test else 5000
  
         # Get connection settings
         engine = get_mysql_engine('MYSQLDB', 'nesta',
@@ -59,7 +59,6 @@ class CordisNeo4jTask(luigi.Task):
         for tablename, table in Base.metadata.tables.items():
             entity_name = extract_name(tablename)
             logging.info(f'\tProcessing {entity_name}')
-            print(f'\tProcessing {entity_name}')
             orm, parent_orm, rel_name = prepare_base_entities(table)
             # Insert data to neo4j in one session per table,
             # to enable constraint and relationship lookups
@@ -83,7 +82,7 @@ class CordisNeo4jTask(luigi.Task):
                                      parent_orm=parent_orm,
                                      rel_name=rel_name)
                         if (irow % flush_freq) == 0:
-                            print('flushing', irow)
+                            logging.info(f'\t\tFlushing at row {irow}')
                             uninterrupted = False
                             break
         # Confirm the task is finished
@@ -95,5 +94,5 @@ class RootTask(luigi.WrapperTask):
 
     def requires(self):
         test = not self.production
-        #set_log_level(test)
+        set_log_level(test)
         return CordisNeo4jTask(test=test)
