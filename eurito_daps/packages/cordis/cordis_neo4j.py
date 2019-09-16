@@ -58,12 +58,14 @@ def build_relationships(session, graph, orm, data_row,
                                       If this is not specified, it implies
                                       that :obj:`orm` is node, rather than a
                                       relationship.
+    Returns:
+        {relationship, back_relationship}: Relationships pointing to the node (inferred from ORM), and one pointing back to it's associated project.
     """
-    # Case 1) `orm` is a node
+    # Case 1) the ORM represents a node, since it has no parents
     if parent_orm is None:
         this_node = Node(extract_name(orm.__tablename__), **data_row)
         rel_props = {}
-    # Case 2) `this` is a relationship
+    # Case 2) this ORM represents a relationship, pointing to a parent
     else:
         this_node = retrieve_node(session, graph, orm, parent_orm, data_row)
         rel_props = data_row
@@ -170,23 +172,24 @@ def _flatten(data):
 
 def flatten_dict(row, keys=[('title',),
                             ('street', 'city', 'postalCode')]):
-    """Flatten a dict by concatenating matching keys
+    """Flatten a dict by concatenating string values
+    of matching keys.
 
     Args:
         row (dict): Data to be flattened
     Returns:
         flat (str): Concatenated data.
     """
-    flat = ''
+    flat = ''  # The output data
     for ks in keys:
+        # If any keys are present, join the values
         if not any(k in row for k in ks):
             continue
         flat = '\n'.join(row[k] for k in ks
                          if k in row)
-        break
-    if len(flat) == 0:
-        print(row)
-        assert False
+        break    
+    assert len(flat) > 0  # Ensures that a key has been found, 
+                          # otherwise you'll need to provide more keys
     return flat
 
 
@@ -211,7 +214,7 @@ def retrieve_node(session, graph, orm, parent_orm, data_row):
 
 
 def extract_name(tablename):
-    """Convert a Cordis tablename to it's Neo4j Node label"""
+    """Convert a Cordis table name to it's Neo4j Node label"""
     return tablename.replace('cordis_', '')[:-1].title()
 
 
