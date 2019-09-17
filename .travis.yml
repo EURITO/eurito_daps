@@ -16,10 +16,10 @@ before_install:
   - sudo mysql_upgrade -u root
   - sudo service mysql restart
 before_script:
-  - mkdir eurito_daps/production/config/
-  - echo -e "[mysqldb]\nx=1" > eurito_daps/production/config/mysqldb.config  # create dummy file with just the config x=1
-  - echo -e "[worker]\nx=1" > eurito_daps/production/config/luigi.cfg  # create dummy file for luigi
-  - echo -e "[crunchbase]\nuser_key=1" > eurito_daps/production/config/crunchbase.config  # create dummy file for crunchbase
+  - mkdir eurito_daps/core/config/
+  - echo -e "[mysqldb]\nx=1" > eurito_daps/core/config/mysqldb.config  # create dummy file with just the config x=1
+  - echo -e "[worker]\nx=1" > eurito_daps/core/config/luigi.cfg  # create dummy file for luigi
+  - echo -e "[crunchbase]\nuser_key=1" > eurito_daps/core/config/crunchbase.config  # create dummy file for crunchbase
   - sudo rm -f /etc/boto.cfg
 #   - mysql_upgrade -u root --force
 #   - sudo service mysql restart
