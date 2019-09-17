@@ -42,7 +42,7 @@ def orm_to_neo4j(session, transaction, orm_instance,
     # Otherwise create a single node, imposing constraints based on SQL FKs
     else:
         set_constraints(orm, graph.schema)
-        transaction.create(Node(extract_name(orm.__tablename__), **data_row))
+        transaction.create(Node(_extract_name(orm.__tablename__), **data_row))
 
 
 def build_relationships(session, graph, orm, data_row,
@@ -63,7 +63,7 @@ def build_relationships(session, graph, orm, data_row,
     """
     # Case 1) the ORM represents a node, since it has no parents
     if parent_orm is None:
-        this_node = Node(extract_name(orm.__tablename__), **data_row)
+        this_node = Node(_extract_name(orm.__tablename__), **data_row)
         rel_props = {}
     # Case 2) this ORM represents a relationship, pointing to a parent
     else:
@@ -88,7 +88,7 @@ def set_constraints(orm, graph_schema):
         graph_schema (py2neo.Graph.Schema): Neo4j graph schema.
     """
     # Retrieve constraints by entity name
-    entity_name = extract_name(orm.__tablename__)
+    entity_name = _extract_name(orm.__tablename__)
     constraints = graph_schema.get_uniqueness_constraints(entity_name)
     # If no constraints have been applied, infer them from the PKs
     if len(constraints) == 0:
@@ -119,10 +119,10 @@ def prepare_base_entities(table):
            for fk in c.foreign_keys]
     parent_orm, rel_name = None, None
     if len(fks) == 1:  # The relationship points to this table
-        rel_name = f'HAS_{extract_name(table.name).upper()}'
+        rel_name = f'HAS_{_extract_name(table.name).upper()}'
     elif len(fks) == 2:  # The relationship points to a parent
         _tablename = table_from_fk(fks)
-        rel_name = f'HAS_{extract_name(_tablename).upper()}'
+        rel_name = f'HAS_{_extract_name(_tablename).upper()}'
         parent_orm = get_class_by_tablename(Base, _tablename)
     # Retrieve the ORM for this table
     orm = get_class_by_tablename(Base, table.name)
@@ -209,18 +209,24 @@ def retrieve_node(session, graph, orm, parent_orm, data_row):
     row = get_row(session, parent_orm, orm, data_row)
     (pk,) = inspect(parent_orm).primary_key
     matcher = NodeMatcher(graph)
-    return matcher.match(extract_name(parent_orm.__tablename__),
+    return matcher.match(_extract_name(parent_orm.__tablename__),
                          **{pk.name: row[pk.name]}).first()
 
 
-def extract_name(tablename):
+def _extract_name(tablename):
     """Convert a Cordis table name to it's Neo4j Node label"""
     return tablename.replace('cordis_', '')[:-1].title()
 
 
 def table_from_fk(fks):
     """Get the table name of the fk constraint, ignoring
-    the cordis_projects table"""
+    the cordis_projects table
+    
+    Args:
+        fks (:obj:`list` of SqlAlchemy.ForeignKey): All foreign keys for a given table.
+    Returns:
+        tablename (str): The table name corresponding to the non-Project foreign key.
+    """
     return [fk.column.table.name for fk in fks
             if fk.column.table.name != 'cordis_projects'][0]
 
