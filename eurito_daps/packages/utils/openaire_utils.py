@@ -1,10 +1,12 @@
 from bs4 import BeautifulSoup
 import re
 from eurito_daps.core.orms import openaire_orm
-from eurito_daps.packages.utils import globals
+import pdb
+import logging
+import time
 
 
-def link_record_with_project(record, record_obj):
+def link_record_with_project(record, record_obj, db_session):
     '''A utility function, which links records with related EC projects and stores this linkage in the association table in the database
 
     Args:
@@ -12,28 +14,31 @@ def link_record_with_project(record, record_obj):
         record_obj (ORM Object): a record returned by a query from the database (could be software, dataset, publication or ECProject record)
     '''
     #extract project codes
-    project_codes = record['projectcodes']
+    project_codes = record['project_codes']
     #for each project code, create projectcode object,
     #add a relationship between this projectcode and softwareObj in association table
     for project_code in project_codes:
         #find project with this code and create an object
-        project_obj = find_project_in_db(project_code.text)
+        #pdb.set_trace()
+        project_obj = find_project_in_db(project_code, db_session)
         #if there is a related project, create a relationship between current software and found project
         if project_obj:
             project_obj.software.append(record_obj)
 
     return record_obj
 
-def find_project_in_db(in_project_code):
+def find_project_in_db(in_project_code, db_session):
     '''A utility function, which returns ORM-type record objects from the database with the specified EC project code
 
     Args:
         in_project_code (int): EC 6-digit project code
     '''
 
-    records = globals.db_session \
+    records = db_session \
                      .query(openaire_orm.ECProjectRecord) \
-                     .filter_by(project_code=in_project_code) \
+                     .filter_by(project_code=in_project_code)
+
+    #pdb.set_trace()
 
     try:
         return records[0]
@@ -61,7 +66,7 @@ def write_records_to_db(records, output_type, db_session):
 
         #if software, find related EC projects and create relationship with related ECprojects via association table
         if is_software:
-            record_obj = link_record_with_project(record, record_obj)
+            record_obj = link_record_with_project(record, record_obj, db_session)
 
         #add object into database
         local_object = db_session.merge(record_obj)
@@ -79,8 +84,9 @@ def get_record_object(cur_record, output_type):
     if output_type == 'software':
         return openaire_orm.SoftwareRecord(title=cur_record['title'], pid=cur_record['pid'], creators=str(cur_record['creators']) )
     if output_type == 'ECProjects':
-        return openaire_orm.ECProjectRecord(title=cur_record['title'], project_code=cur_record['projectcode'])
+        return openaire_orm.ECProjectRecord(title=cur_record['title'], project_code=cur_record['project_code'])
 
+#TODO add research datasets and other research projects parser
 
 def parse_soft (cur_soup):
     '''A utility function, which parses software records from XML and returns a list of records with software that are related to EC Projects
@@ -94,34 +100,9 @@ def parse_soft (cur_soup):
     return [{'project_codes': r.find('code'),
          'pid': r.find('pid').text,
          'title': r.find('title').text,
-         'creators': r.find_all('creators').text,}
+         'creators': r.find_all('creators'),}
          for r in results
          if r.find_all('code')] #if code tag exists, then it is related to EC project
-
-    '''for result in results:
-
-        #check if related to EC projects
-        project_codes = result.find_all('code')
-        #if code tag exists, then it is related to EC project
-        if project_codes:
-            out_obj = dict()
-            out_obj['projectcodes'] = project_codes
-
-            pid = result.find('pid') #doi identifier
-
-            out_obj['pid'] = pid.text
-
-            title = result.find('title')
-
-            out_obj['title'] = title.text
-
-            creators = result.find_all('creator')
-
-            out_obj['creators'] = creators
-
-            output_list.append(out_obj)
-    return output_list '''
-
 
 def parse_proj (cur_soup):
     '''A utility function, which parses EC project records from XML, returns a list of records
@@ -131,20 +112,6 @@ def parse_proj (cur_soup):
     '''
     output_list = list()
     results = cur_soup.find_all(re.compile("^oaf:project"))
-
-    '''for result in results:
-        out_obj = dict()
-
-        title = result.find('title')
-
-        out_obj['title'] = title.text
-
-        project_code = result.find('code')
-
-        out_obj['projectcode'] = project_code.text
-
-        output_list.append(out_obj)
-    return output_list '''
 
     return [{'title': r.find('title').text,
          'project_code': r.find('code').text}
@@ -165,6 +132,7 @@ def get_res_token(soup):
     if res_token:
         res_token_str = res_token.text
         res_token_str = res_token_str.replace(' ', '%20')
+        res_token_str = res_token_str.replace('"', '%22')
         return res_token_str
     else:
         return 'None'
@@ -179,7 +147,17 @@ def get_soup_contents(currentUrl, reqsession, output_type, resumption_token):
 
     for x in range(0, 9):
         #requests.get(url, params={'metadataPrefix':'oaf', 'set':output_type})
-        response = reqsession.get(currentUrl, params={'metadataPrefix': 'oaf', 'set': output_type, 'resumption_token': resumption_token})
+        #pdb.set_trace()
+        if resumption_token == 'None' or resumption_token == 'First request':
+            response = reqsession.get(currentUrl, params={'verb': 'ListRecords', 'metadataPrefix': 'oaf', 'set': output_type})
+            logging.info("No resumptionToken")
+        else:
+            logging.info("resumptionToken is there ")
+            #response = reqsession.get(currentUrl, params={'verb': 'ListRecords', 'metadataPrefix': 'oaf', 'set': output_type, 'resumptionToken': resumption_token})
+            #resumptionToken as a parameter does not work for requests call, hence use string request
+            requeststr = currentUrl + '?verb=ListRecords&resumptionToken=' + resumption_token
+            logging.info(requeststr)
+            response = reqsession.get(requeststr)
         if response.status_code == 200:
             soup = BeautifulSoup(response.content, 'lxml')
             response.close()

@@ -40,9 +40,12 @@ class ECProjectRecord(Base):
 
     id = Column(Integer, primary_key=True)
     title = Column(String(255))
-    projectcode = Column(String(255))
+    project_code = Column(String(255))
 
 engine = get_mysql_engine("MYSQLDBCONF", 'mysqldb', 'dev')
+
+#SoftwareRecord.__table__.drop()
+#ECProjectRecord.__table__.drop()
 
 Base.metadata.create_all(engine)
 

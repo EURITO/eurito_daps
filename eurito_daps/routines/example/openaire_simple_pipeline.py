@@ -69,7 +69,7 @@ class CollectOpenAireTask(luigi.Task):
     def run(self):
         '''Collects records from OpenAIRE API and stores them into the 'dev' or 'production' database
         '''
-        base_url = 'http://api.openaire.eu/oai_pmh?verb=ListRecords'
+        base_url = 'http://api.openaire.eu/oai_pmh'
 
         #engine = create_engine('sqlite:///pythonsqlite.db', echo=False)
 
@@ -80,13 +80,13 @@ class CollectOpenAireTask(luigi.Task):
 
         #open DB session
         Session = sessionmaker(bind=engine)
-        globals.dbsession = Session()
+        dbsession = Session()
 
         #open up requests session
         reqsession = requests.session()
         reqsession.keep_alive = False
 
-        resumption_token = 'Not None'
+        resumption_token = 'First request'
 
         #requests.get(url, params={'metadataPrefix':'oaf', 'set':output_type})
 
@@ -103,18 +103,13 @@ class CollectOpenAireTask(luigi.Task):
             logging.info(cur_soup)
 
             titletag = cur_soup.find('title')
-            logging.info(titletag)
-
-            '''if titletag.text == '503 Service Unavailable' or titletag.text == '502 Proxy Error':
-                logging.info("Service unavailable, waiting 10 seconds and trying again")
-                time.sleep(10)
-                continue
-            '''
+            #logging.debug(titletag.text)
 
             #obtain resumption_token from soup and update the request url
             resumption_token = openaire_utils.get_res_token(cur_soup)
             #current_url = base_url + '&resumption_token=' + resumption_token
-            #logging.info ("Next URL: " + current_url)
+            logging.info("resumption_token: ", resumption_token)
+
 
             #parse records
             if self.output_type == 'software':
@@ -123,7 +118,7 @@ class CollectOpenAireTask(luigi.Task):
                 cur_records = openaire_utils.parse_proj(cur_soup)
 
             #write records into database
-            openaire_utils.write_records_to_db(cur_records, self.output_type, globals.dbsession)
+            openaire_utils.write_records_to_db(cur_records, self.output_type, dbsession)
 
             count += 1
 
@@ -132,9 +127,9 @@ class CollectOpenAireTask(luigi.Task):
             #    break
 
         #close DB session
-        globals.dbsession.close()
+        dbsession.close()
 
-        logging.info('Writing to DB complete')
+        logging.debug('Writing to DB complete')
 
         # mark as done
         logging.info("Task complete")
