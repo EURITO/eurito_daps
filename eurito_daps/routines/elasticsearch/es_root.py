@@ -1,8 +1,13 @@
 from nesta.core.luigihacks.luigi_logging import set_log_level
 from nesta.core.luigihacks.sql2estask import Sql2EsTask
+from nesta.core.luigihacks.misctools import find_filepath_from_pathstub as f3p
+
 from nesta.core.orms.arxiv_orm import Article
 from nesta.core.orms.crunchbase_orm import Organization
 #from eurito_daps.orms.patstat_2019_05_13 import Tls201Appln as Patent
+
+from datetime import datetime as dt
+import luigi
 
 S3_BUCKET='eurito-production-intermediate'
 
@@ -16,8 +21,10 @@ def kwarg_maker(dataset):
 
 
 class RootTask(luigi.WrapperTask):
-    process_batch_size = luigi.IntParameter(default=10000)
+    process_batch_size = luigi.IntParameter(default=10000)    
     production = luigi.BoolParameter(default=False)
+    date = luigi.DateParameter(default=dt.now())
+    drop_and_recreate = luigi.BoolParameter(default=False)
 
     def requires(self):
         set_log_level()

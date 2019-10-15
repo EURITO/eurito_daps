@@ -2,10 +2,10 @@ import logging
 import py2neo
 from sqlalchemy.orm import sessionmaker
 
-from eurito_daps.production.ogms.cordis_h2020_ogm import FrameworkProgramme
-from eurito_daps.production.ogms.cordis_h2020_ogm import Organizations as OrganizationsGraph
-from eurito_daps.production.ogms.cordis_h2020_ogm import Projects as ProjectsGraph
-from eurito_daps.production.ogms.cordis_h2020_ogm import Programmes as ProgrammesGraph
+from eurito_daps.core.ogms.cordis_h2020_ogm import FrameworkProgramme
+from eurito_daps.core.ogms.cordis_h2020_ogm import Organizations as OrganizationsGraph
+from eurito_daps.core.ogms.cordis_h2020_ogm import Projects as ProjectsGraph
+from eurito_daps.core.ogms.cordis_h2020_ogm import Programmes as ProgrammesGraph
 from nesta.production.orms.cordis_h2020_orm import Organizations as OrganizationsSQL
 from nesta.production.orms.cordis_h2020_orm import Projects as ProjectsSQL
 from nesta.production.orms.orm_utils import db_session, get_mysql_engine
