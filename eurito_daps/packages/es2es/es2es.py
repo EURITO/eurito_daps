@@ -11,7 +11,7 @@ The commands require elasticdump to be installed via npm.
 from nesta.core.orms.orm_utils import get_config
 
 ENDPOINT = "{url}:{port}/{index}"
-ESDUMP = "elasticdump --input={_input} --output={_output} --type={_type} --limit=2000"
+ESDUMP = "elasticdump --input={_input} --output={_output} --type={_type} --limit=200"
 
 def _endpoint(url, index, port):
     """Formulates the endpoint URL"""
@@ -29,7 +29,7 @@ def esdump_str(label, in_host, _type):
     config = get_config('elasticsearch.config', label)
     _input = _endpoint(in_host, config['index'], config['port'])
     _output = _endpoint(config['host'], config['index'], config['port'])
-    print(ESDUMP.format(_input=_input, _output=_output, _type=_type))
+    print(ESDUMP.format(_input=_input, _output=_output, _type=_type),'\n')
 
 if __name__ == "__main__":
     import sys
