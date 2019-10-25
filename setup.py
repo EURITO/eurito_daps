@@ -2,9 +2,7 @@ from setuptools import setup
 from setuptools import find_namespace_packages
 import os
 
-with open('requirements.txt') as f:
-    required = f.read().splitlines()[1:]  # Ignore the nesta github for now
-required += ['nesta @ git+ssh://git@github.com/nestauk/nesta@dev#egg=nesta']
+required = ['nesta @ git+ssh://git@github.com/nestauk/nesta@dev#egg=nesta']
 
 is_travis = 'TRAVIS' in os.environ
 
