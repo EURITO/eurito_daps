@@ -3,8 +3,8 @@ from setuptools import find_namespace_packages
 import os
 
 with open('requirements.txt') as f:
-    required = f.read().splitlines()
-
+    required = f.read().splitlines()[1:]  # Ignore the nesta github for now
+required += ['nesta @ git+ssh://git@github.com/nestauk/nesta@dev#egg=nesta']
 
 is_travis = 'TRAVIS' in os.environ
 
@@ -14,7 +14,7 @@ common_kwargs = dict(
     license='MIT',
     install_requires=required,
     long_description=open('README.rst').read(),
-    url='https://github.com/nestauk/nesta',
+    url='https://github.com/EURITO/eurito_daps',
     author='Joel Klinger',
     author_email='joel.klinger@nesta.org.uk',
     maintainer='Joel Klinger',
@@ -34,10 +34,8 @@ common_kwargs = dict(
     include_package_data=True,
 )
 
-setup(name='nesta',
-      #packages=find_packages(where=p, exclude=exclude),
+setup(name='eurito_daps',
       packages=find_namespace_packages(where='.', exclude=exclude),
-      #package_dir={'nesta': '.'},
       package_data={'': ['TM_WORLD_BORDERS_SIMPL*']},
       **common_kwargs)
 
