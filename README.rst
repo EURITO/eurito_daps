@@ -23,9 +23,9 @@ on `our GitHub repo`_, you will find complete documentation at our `Read the Doc
 ..    :scale: 100%
 ..    :targethttps://travis-ci.org/rtfd/readthedocs.org
 
-.. |docs| image:: https://readthedocs.org/projects/eurito_daps/badge/?version=latest
+.. |docs| image:: https://readthedocs.org/projects/eurito/badge/?version=latest
     :alt: Documentation Status
-    :target: https://eurito_daps.readthedocs.io/en/latest/?badge=latest
+    :target: https://eurito.readthedocs.io/en/latest/?badge=latest
 
 
 .. |build| image:: https://travis-ci.org/EURITO/eurito_daps.svg?branch=master
@@ -33,9 +33,9 @@ on `our GitHub repo`_, you will find complete documentation at our `Read the Doc
     :alt: Build Status (master)
     
 
-.. |docs (dev)| image:: https://readthedocs.org/projects/eurito_daps/badge/?version=dev
+.. |docs (dev)| image:: https://readthedocs.org/projects/eurito/badge/?version=dev
     :alt: Documentation Status
-    :target: https://eurito_daps.readthedocs.io/en/latest/?badge=dev
+    :target: https://eurito.readthedocs.io/en/latest/?badge=dev
 
 
 .. |build (dev)| image:: https://travis-ci.org/EURITO/eurito_daps.svg?branch=dev
