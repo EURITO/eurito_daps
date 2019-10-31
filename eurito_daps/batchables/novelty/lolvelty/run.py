@@ -1,3 +1,7 @@
+"""
+Apply lolvelty score to Elasticsearch data.
+"""
+
 from nesta.core.luigihacks.elasticsearchplus import ElasticsearchPlus
 from nesta.packages.novelty.lolvelty import lolvelty
 from ast import literal_eval
@@ -54,38 +58,7 @@ def run():
                  id=doc_id, body=doc)
 
 if __name__ == "__main__":
-
-    log_level = logging.INFO
-    if 'BATCHPAR_outinfo' not in os.environ:
-        logging.getLogger('boto3').setLevel(logging.CRITICAL)
-        logging.getLogger('botocore').setLevel(logging.CRITICAL)
-        logging.getLogger('s3transfer').setLevel(logging.CRITICAL\
-)
-        logging.getLogger('urllib3').setLevel(logging.CRITICAL)
-        log_level = logging.INFO
-        pars = {'batch_file': ('ArxivLolveltyTask-2019-08-19'
-                               '-True-15662373053397586.json'),
-                'config': 'mysqldb.config',
-                'bucket': 'nesta-production-intermediate',
-                'done': 'False',
-                'outinfo': ('https://search-arxlive'
-                            '-t2brq66muzxag44zwmrcfrlmq4.'
-                            'eu-west-2.es.amazonaws.com'),
-                'count': '6000',
-                'out_port': '443',
-                'fields': "('textBody_abstract_article',)",
-                'score_field': "metric_novelty_article",
-                'index': 'arxiv_dev',
-                'out_type': '_doc',
-                'aws_auth_region': 'eu-west-2',
-                'entity_type': 'article',
-                'test': 'True',
-                'routine_id': 'DUMMYTEST'}
-        for k, v in pars.items():
-            os.environ[f'BATCHPAR_{k}'] = v
-
-    log_stream_handler = logging.StreamHandler()
-    logging.basicConfig(handlers=[log_stream_handler, ],
+    logging.basicConfig(handlers=[logging.StreamHandler(), ],
                         level=logging.INFO,
                         format="%(asctime)s:%(levelname)s:%(message)s")    
     run()
