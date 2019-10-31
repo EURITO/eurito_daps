@@ -6,20 +6,15 @@
 .. include:: ../../README.rst
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 2
    :caption: Contents:
   
    eurito_daps.packages
-   eurito_daps.core
    eurito_daps.batchables
    eurito_daps.routines
    eurito_daps.schemas
    eurito_daps.scripts   
 
-
-.. include:: ../../eurito_daps/packages/README.rst
-.. include:: ../../eurito_daps/core/README.rst
-	   
 
 License
 -------

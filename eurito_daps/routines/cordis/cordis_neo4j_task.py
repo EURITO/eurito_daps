@@ -10,7 +10,7 @@ from nesta.core.orms.orm_utils import db_session_query, get_mysql_engine
 from nesta.core.orms.orm_utils import graph_session
 from nesta.core.luigihacks.luigi_logging import set_log_level
 from nesta.core.luigihacks.misctools import get_config
-from eurito_daps.packages.cordis.cordis_neo4j import extract_name, orm_to_neo4j
+from eurito_daps.packages.cordis.cordis_neo4j import _extract_name, orm_to_neo4j
 from eurito_daps.packages.cordis.cordis_neo4j import prepare_base_entities
 from nesta.core.luigihacks.mysqldb import MySqlTarget
 
@@ -57,7 +57,7 @@ class CordisNeo4jTask(luigi.Task):
 
         # Iterate over all tables in the ORM
         for tablename, table in Base.metadata.tables.items():
-            entity_name = extract_name(tablename)
+            entity_name = _extract_name(tablename)
             logging.info(f'\tProcessing {entity_name}')
             orm, parent_orm, rel_name = prepare_base_entities(table)
             # Insert data to neo4j in one session per table,
