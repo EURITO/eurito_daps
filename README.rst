@@ -14,7 +14,7 @@ tools and packages, as well as our in-house production system. If you're reading
 on `our GitHub repo`_, you will find complete documentation at our `Read the Docs site`_.
 
 .. _EURITO: http://www.eurito.eu/
-.. _Read the Docs site: https://eurito_daps.readthedocs.io/
+.. _Read the Docs site: https://eurito.readthedocs.io/
 .. _our GitHub repo: https://github.com/EURITO
 
 ..    :build-status:
