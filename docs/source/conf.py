@@ -22,7 +22,7 @@ sys.path.insert(0, os.path.abspath('../../eurito_daps/core'))
 # -- Project information -----------------------------------------------------
 
 project = 'eurito'
-copyright = '2018, EURITO'
+copyright = '2019, EURITO'
 author = 'EURITO'
 
 # The short X.Y version

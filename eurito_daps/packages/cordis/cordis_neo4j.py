@@ -1,3 +1,8 @@
+"""
+cordis
+------
+"""
+
 from py2neo import NodeMatcher
 from py2neo.data import Node, Relationship
 from sqlalchemy.inspection import inspect

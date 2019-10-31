@@ -24,7 +24,6 @@
 License
 -------
 
-`MIT`_ © 2018 Nesta
+`MIT`_ © 2019 EURITO
 
 .. _MIT: LICENSE
-
