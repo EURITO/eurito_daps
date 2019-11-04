@@ -1,8 +1,6 @@
 import logging
 from py2neo import Node, NodeMatcher, Relationship
 
-#
-#
 def get_index(node, graph, igr):
     '''A utility function, which takes a py2neo node and a graph, returns the index of the node in igraph. If the node does not exist, create new node and return index.
 
@@ -40,6 +38,6 @@ def add_betw_property(graph, igraph, betw):
 
     for index, v in enumerate(igraph.vs):
         neo_node = graph.nodes.get(v['gid'])
-        neo_node["betw"] = betw[index]
         graph.merge(neo_node)
+        neo_node["betw"] = betw[index]
         graph.push(neo_node)
