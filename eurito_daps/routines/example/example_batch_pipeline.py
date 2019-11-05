@@ -11,6 +11,19 @@ from nesta.production.luigihacks import autobatch
 from nesta.production.orms.orm_utils import setup_es
 
 from eurito_daps.packages.utils import silo
+
+import requests
+import pathlib
+from bs4 import BeautifulSoup
+import re
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy.orm import relationship
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy import MetaData, Table
+from sqlalchemy.orm import scoped_session
+
 import luigi
 import datetime
 import os
