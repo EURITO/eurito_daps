@@ -1,7 +1,8 @@
 '''
-Simple Example
+Centrality Pipeline
 ==============
-An example of building a pipeline with just a wrapper task and a regular task.
+Takes network from Neo4j database, calculates network centrality measures and updates each node in the database with new centrality attributes
+
 '''
 
 from nesta.core.luigihacks.mysqldb import MySqlTarget
@@ -113,11 +114,5 @@ class CalcCentralityTask(luigi.Task):
         logging.debug('Writing to DB complete')
 
         # mark as done
-        logging.info("Task complete")
-        self.output().touch()
-
-
-        print(self.output_type)
-
         logging.info("Task complete")
         self.output().touch()
