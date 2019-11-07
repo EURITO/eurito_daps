@@ -12,11 +12,11 @@ In EURITO we predominantly use four data sources:
 CORDIS
 ------
 
-Data from the CORDIS's `H2020 API <http://cordis.europa.eu/data/cordis-h2020projects.csv>`_ and `FP7 API <http://cordis.europa.eu/data/cordis-fp7projects.csv>`_ funded projects is extracted using code found `in this repository <https://nesta.readthedocs.io/en/dev/_modules/packages/cordis/cordis_api.py>`_.
+Data from the CORDIS's `H2020 API <http://cordis.europa.eu/data/cordis-h2020projects.csv>`_ and `FP7 API <http://cordis.europa.eu/data/cordis-fp7projects.csv>`_ funded projects is extracted using code found `in this repository <https://nesta.readthedocs.io/en/dev/nesta.core.routines.cordis.html>`_.
 
 In total, 51250 organisations and 50640 projects were extracted from the API. There are 1102 proposal calls, 245465 publications and 34507 reports. In total 6545 are associated with the projects.
 
-Software outputs are associated with the projects, using `OpenAIRE API <http://api.openaire.eu/oai_pmh>`_ using `this codebase <https://eurito.readthedocs.io/en/dev/_modules/packages/utils/openaire_utils.py>`_.
+Software outputs are associated with the projects, using `OpenAIRE API <http://api.openaire.eu/oai_pmh>`_.
 
 All of these entities are then linked together, and stored using a `neo4j <https://neo4j.com/>`_ graph database. The code for automatically piping the data in neo4j is provided `here <https://eurito.readthedocs.io/en/dev/_modules/packages/utils/cordis_neo4j.py>`_.
 
@@ -25,11 +25,11 @@ All of these entities are then linked together, and stored using a `neo4j <https
     :undoc-members:
     :show-inheritance:
 
-.. automodule:: eurito_daps.routines.cordis.cordis_neo4j_task
+.. automodule:: eurito_daps.packages.utils.openaire_utils
     :members:
     :undoc-members:
-    :show-inheritance:       
-   
+    :show-inheritance:
+
 
 arXiv
 ------

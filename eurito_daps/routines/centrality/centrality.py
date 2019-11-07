@@ -1,36 +1,25 @@
 '''
 Centrality Pipeline
-==============
+===================
+
 Takes network from Neo4j database, calculates network centrality measures and updates each node in the database with new centrality attributes
 '''
 
 from nesta.core.luigihacks.mysqldb import MySqlTarget
 from nesta.core.luigihacks.misctools import get_config
 
-from eurito_daps.packages.utils import openaire_utils, centrality_utils
-from eurito_daps.packages.utils import globals
-from eurito_daps.core.orms.openaire_orm import Base, SoftwareRecord
-from eurito_daps.packages.cordis.cordis_neo4j import _extract_name, orm_to_neo4j
-
-from nesta.core.orms.orm_utils import get_mysql_engine
+from eurito_daps.packages.utils import centrality_utils
 from nesta.core.orms.orm_utils import graph_session
 
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy import create_enginels
-
-from py2neo.data import Node, Relationship
-
 import igraph as ig
-
 import luigi
 import datetime
 import os
 import logging
-import requests
-import time
+
 
 class RootTask(luigi.WrapperTask):
-    '''The root task, which collects the supplied parameters and calls the SimpleTask.
+    '''The root task, which collects the supplied parameters and calls the main task.
 
     Args:
         date (datetime): Date used to label the outputs

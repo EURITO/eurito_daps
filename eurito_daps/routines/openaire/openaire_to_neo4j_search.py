@@ -1,30 +1,27 @@
 '''
-Simple Example
-==============
-An example of building a pipeline with just a wrapper task and a regular task.
+OpenAIRE to Neo4j
+=================
+
+Pipe data directly from the OpenAIRE API to Neo4j by matching to Cordis projects
+already in Neo4j.
 '''
 
 from nesta.core.luigihacks.mysqldb import MySqlTarget
 from nesta.core.luigihacks.misctools import get_config
 
 from eurito_daps.packages.utils import openaire_utils
-from eurito_daps.core.orms.openaire_orm import Base, SoftwareRecord
-from eurito_daps.packages.cordis.cordis_neo4j import _extract_name, orm_to_neo4j
 
 from nesta.core.orms.orm_utils import get_mysql_engine
 from nesta.core.orms.orm_utils import graph_session
 
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy import create_engine
-
-from py2neo.data import Node, Relationship
+from py2neo.data import Relationship
 
 import luigi
 import datetime
 import os
 import logging
 import requests
-import time
+
 
 class RootTask(luigi.WrapperTask):
     '''The root task, which collects the supplied parameters and calls the SimpleTask.
@@ -83,17 +80,13 @@ class OpenAireToNeo4jTask(luigi.Task):
         gkwargs = dict(host=conf['host'], secure=True,
                        auth=(conf['user'], conf['password']))
 
-        #open up requests session
+        # open up requests session
         reqsession = requests.session()
         reqsession.keep_alive = False
-
-        #resumption_token = 'First request'
-
         base_url = 'http://api.openaire.eu/search/'
-
         count = 0
 
-        #for each project in Neo4j
+        # for each project in Neo4j
         with graph_session(**gkwargs) as tx:
             graph = tx.graph
 
@@ -107,9 +100,9 @@ class OpenAireToNeo4jTask(luigi.Task):
                 if index % 1000 == 0:
                     logging.info("Checking project %d out of %d" % (index, total_projects) )
 
-                souplist = openaire_utils.get_project_soups(base_url, reqsession, self.output_type, neo_project.identity)
-
-                #get all results, not just from one page
+                souplist = openaire_utils.get_project_soups(base_url, reqsession,
+                                                            self.output_type, neo_project.identity)
+                # get all results, not just from one page
                 results = openaire_utils.get_results_from_soups(souplist)
 
                 sum = sum + len(results)
@@ -118,20 +111,16 @@ class OpenAireToNeo4jTask(luigi.Task):
 
                 for result in results:
                     title = result.find("title", recursive=False)
-                    #logging.info("title: %s" % title.text) #add recursive=False
-
                     pid = result.find("pid", recursive=False)
-                    #logging.info("pid: %s" % pid.text)
 
                     record_obj = dict()
-
                     record_obj['title'] = title.text
                     record_obj['pid'] = pid.text
 
-                    #create record object in Neo4j and return it
+                    # create record object in Neo4j and return it
                     created_node = openaire_utils.write_record_to_neo(record_obj, self.output_type, graph)
 
-                    #create relationship between neo_project and record_obj
+                    # create relationship between neo_project and record_obj
                     relationship_type = "HAS_" + self.output_type.upper()
 
                     project_has_node = Relationship(neo_project, relationship_type, created_node)
@@ -143,8 +132,6 @@ class OpenAireToNeo4jTask(luigi.Task):
                 if index > 60000 and self.test:
                     logging.info("Breaking after %d results in test mode" % index)
                     break
-
-        #logging.info("Sum: %d" % sum)
 
         # mark as done
         logging.info("Task complete")

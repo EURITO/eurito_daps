@@ -1,6 +1,9 @@
 """
-cordis
-------
+Cordis to Neo4j
+---------------
+
+Tools for piping data from a SqlAlchemy ORM to Neo4j,
+to be used in the Luigi pipeline.
 """
 
 from py2neo import NodeMatcher

@@ -1,11 +1,8 @@
 from bs4 import BeautifulSoup
-import re
-from eurito_daps.core.orms import openaire_orm
-from eurito_daps.core.orms.openaire_orm import Base, SoftwareRecord, association_table
-import pdb
 import logging
 import time
-from py2neo import Node, NodeMatcher
+from py2neo import Node
+
 
 def write_record_to_neo(record, output_type, graph):
     '''A utility function, which takes record and writes it to neo4j graph
@@ -20,7 +17,7 @@ def write_record_to_neo(record, output_type, graph):
 
     found_node = graph.nodes.match(output_type, pid=record['pid']).first()
 
-    if found_node == None:
+    if found_node is None:
         created_node = Node(record_type, title=record['title'], pid=record['pid'])
         graph.create(created_node)
         return created_node

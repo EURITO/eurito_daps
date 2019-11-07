@@ -1,5 +1,5 @@
 """
-CordisNeo4jTask
+Cordis to Neo4j
 ===============
 
 Task for piping Cordis data from SQL to Neo4j.
@@ -22,11 +22,13 @@ from py2neo import Graph
 
 
 class CordisNeo4jTask(luigi.Task):
+    """Task for piping Cordis data to neo4j"""
     test = luigi.BoolParameter(default=True)
     date = luigi.DateParameter(default=dt.now())
 
     def output(self):
-        '''Points to the output database engine where the task is marked as done.
+        '''
+        Points to the output database engine where the task is marked as done.
         The luigi_table_updates table exists in test and production databases.
         '''
         db_config = get_config(os.environ["MYSQLDB"], "mysqldb")
@@ -38,7 +40,7 @@ class CordisNeo4jTask(luigi.Task):
     def run(self):
         limit = 100 if self.test else None
         flush_freq = 33 if self.test else 5000
- 
+
         # Get connection settings
         engine = get_mysql_engine('MYSQLDB', 'nesta',
                                   'dev' if self.test else 'production')

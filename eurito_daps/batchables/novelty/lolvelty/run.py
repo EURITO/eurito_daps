@@ -1,5 +1,11 @@
 """
-Apply lolvelty score to Elasticsearch data.
+run.py (lolvelty)
+-----------------
+
+Calculates the "lolvelty" novelty score to documents
+in Elasticsearch, on a document-by-document basis.
+Note that this is a slow procedure, and the bounds of
+document "lolvelty" can't be known a priori.
 """
 
 from nesta.core.luigihacks.elasticsearchplus import ElasticsearchPlus
@@ -31,7 +37,7 @@ def run():
     logging.info(f'Getting document ids...')
     all_doc_ids = json.loads(ids_obj.get()['Body']._raw_stream.read())
     logging.info(f'Got {len(all_doc_ids)} document ids')
-    
+
     # Set up Elasticsearch
     es = ElasticsearchPlus(hosts=es_host,
                            port=es_port,
@@ -60,5 +66,5 @@ def run():
 if __name__ == "__main__":
     logging.basicConfig(handlers=[logging.StreamHandler(), ],
                         level=logging.INFO,
-                        format="%(asctime)s:%(levelname)s:%(message)s")    
+                        format="%(asctime)s:%(levelname)s:%(message)s")
     run()

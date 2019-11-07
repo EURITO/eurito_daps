@@ -1,3 +1,12 @@
+"""
+Transfer of Elasticsearch data
+==============================
+
+This pipeline is responsible for the transfer of Elasticsearch data
+from a remote origin (in our case, Nesta's Elasticsearch endpoint)
+to EURITO's endpoint.
+"""
+
 from es2es import es2es
 import luigi
 from datetime import datetime as dt

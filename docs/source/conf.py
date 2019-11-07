@@ -79,6 +79,7 @@ pygments_style = 'sphinx'
 
 autodoc_default_flags = ['members', 'undoc-members']
 autodoc_member_order = 'bysource'
+autodoc_mock_imports = ["es2es", "igraph"]
 html_logo = 'eurito.png'
 
 # -- Options for HTML output -------------------------------------------------

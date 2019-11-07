@@ -8,7 +8,7 @@
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
-  
+
    eurito_daps.packages
    eurito_daps.batchables
    eurito_daps.routines
