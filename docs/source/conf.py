@@ -19,6 +19,19 @@ sys.path.insert(0, os.path.abspath('../../eurito_daps/'))
 sys.path.insert(0, os.path.abspath('../../eurito_daps/core'))
 
 
+from nesta.core.luigihacks.misctools import find_filepath_from_pathstub
+try:
+    find_filepath_from_pathstub('luigi.cfg')
+except FileNotFoundError:
+    config_dir = 'core/config'
+    os.makedirs(config_dir)
+    with open(os.path.join(config_dir, 'luigi.cfg'), 'w') as f:
+        f.write('[worker]\nx=1')
+    with open(os.path.join(config_dir, 'mysqldb.config'), 'w') as f:
+        f.write('[mysqldb]\nx=1')
+    print(os.listdir(config_dir))
+
+    
 # -- Project information -----------------------------------------------------
 
 project = 'eurito'
@@ -88,13 +101,13 @@ html_logo = 'eurito.png'
 # a list of builtin themes.
 #
 #html_theme = 'alabaster'
-#html_theme = "nature"
+html_theme = "nature"
 #html_theme_options = {
 #    "rightsidebar": "true",
 #    "relbarbgcolor": "black"
 #}
 
-html_theme = "sphinx_rtd_theme"
+#html_theme = "sphinx_rtd_theme"
 html_theme_path = ["_themes", ]
 
 

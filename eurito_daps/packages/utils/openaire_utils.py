@@ -1,3 +1,11 @@
+"""
+Enrich Cordis with OpenAIRE
+===========================
+
+Tools for collecting OpenAIRE data (by Cordis project), and piping
+to Neo4j.
+"""
+
 from bs4 import BeautifulSoup
 import logging
 import time
