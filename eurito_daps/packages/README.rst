@@ -30,7 +30,6 @@ All of these entities are then linked together, and stored using a `neo4j <https
     :undoc-members:
     :show-inheritance:
 
-
 arXiv
 ------
 
