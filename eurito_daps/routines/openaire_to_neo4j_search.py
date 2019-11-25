@@ -1,7 +1,7 @@
 '''
-Simple Example
+OpenAIRE data retrieval pipeline
 ==============
-An example of building a pipeline with just a wrapper task and a regular task.
+
 '''
 
 from nesta.core.luigihacks.mysqldb import MySqlTarget
@@ -103,18 +103,25 @@ class OpenAireToNeo4jTask(luigi.Task):
 
             sum = 0
 
-            for index, neo_project in enumerate(neo_projects):
-                if index % 1000 == 0:
-                    logging.info("Checking project %d out of %d" % (index, total_projects) )
+            #openaire_utils.enrich_grant_num_neo4j(graph, reqsession, bulkURL = 'http://api.openaire.eu/oai_pmh')
 
-                souplist = openaire_utils.get_project_soups(base_url, reqsession, self.output_type, neo_project.identity)
+            for index, neo_project in enumerate(neo_projects):
+                if index % 100 == 0:
+                    logging.info("Checking project %d out of %d with acronym %s and grant_num %s" % (index, total_projects, neo_project['acronym'], neo_project['grant_num']) )
+
+                if neo_project['grant_num'] == None: #in neo4j, but not in openaire
+                    #logging.info("Project is not in OpenAire, thus, no linkage")
+                    continue
+
+                souplist = openaire_utils.get_project_soups(base_url, reqsession, self.output_type, neo_project['grant_num'])
+                #souplist = openaire_utils.get_project_soups(base_url, reqsession, self.output_type, "654024")
 
                 #get all results, not just from one page
                 results = openaire_utils.get_results_from_soups(souplist)
 
                 sum = sum + len(results)
-                if len(results) > 0:
-                    logging.info("Found %d related records" % len(results))
+                #if len(results) > 0:
+                    #logging.info("Found %d related records" % len(results))
 
                 for result in results:
                     title = result.find("title", recursive=False)
@@ -134,9 +141,15 @@ class OpenAireToNeo4jTask(luigi.Task):
                     #create relationship between neo_project and record_obj
                     relationship_type = "HAS_" + self.output_type.upper()
 
+                    #if len(list(graph.match(start_node=neo_project, end_node=created_node, rel_type=relationship_type))) > 0:
+                    #    logging.info("Relationship already exists")
+                    #else:
                     project_has_node = Relationship(neo_project, relationship_type, created_node)
                     graph.create(project_has_node)
 
+                    #if len(list(graph.match(start_node=created_node, end_node=neo_project, rel_type="HAS_PROJECT"))) > 0:
+                    #    logging.info("Relationship already exists")
+                    #else:
                     node_has_project = Relationship(created_node, "HAS_PROJECT", neo_project)
                     graph.create(node_has_project)
 
