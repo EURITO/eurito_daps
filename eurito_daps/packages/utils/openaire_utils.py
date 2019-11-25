@@ -18,24 +18,30 @@ def write_record_to_neo(record, output_type, graph):
 
     record_type = str(output_type).capitalize()
 
-    found_node = graph.nodes.match(output_type, pid=record['pid']).first()
+    found_node = graph.nodes.match(output_type, title=record['title']).first()
+    if record['title'] == 'gCube 4.6.1 - Database Reosurce API v. 1.0.0':
+        logging.info("returning created/found node %s " % found_node)
 
     if found_node == None:
         created_node = Node(record_type, title=record['title'], pid=record['pid'])
         graph.create(created_node)
+        if record['title'] == 'gCube 4.6.1 - Database Reosurce API v. 1.0.0':
+            logging.info("returning created node")
         return created_node
     else:
-        logging.info("returning found node")
+        if record['title'] == 'gCube 4.6.1 - Database Reosurce API v. 1.0.0':
+            logging.info("returning found node")
         return found_node
+    #gCube 4.6.1 - Database Reosurce API v. 1.0.0
 
-def get_project_soups(currentUrl, reqsession, output_type, projectID):
-    ''' Gets a beautiful soup according to output type and projectID
+def get_project_soups(currentUrl, reqsession, output_type, grant_num):
+    ''' Gets a beautiful soup according to output type and grant number
 
         Args:
             currentUrl(str): URL to OpenAIRE API
             reqsession (instance of Requests session): currently open HTTP request
             output_type(str): type of record to be extracted from OpenAIRE API. Accepts "software", "datasets", "publications", "ECProjects"
-            projectID(str): EC project identifier
+            grant_num(str): EC project grant number
 
         Returns:
             souplist(list): a list of BeautifulSoup objects that contain the results from API call
@@ -47,7 +53,7 @@ def get_project_soups(currentUrl, reqsession, output_type, projectID):
     pagesize = 100
     souplist = list()
     while (page + 1)*pagesize < total:
-        response = reqsession.get(currentUrl + output_type, params={'hasProject': 'true', 'projectID': projectID, 'size': pagesize, 'page': page})
+        response = reqsession.get(currentUrl + output_type, params={'projectID': grant_num, 'size': pagesize, 'page': page})
         if response.status_code == 200:
             soup = BeautifulSoup(response.content, 'lxml')
             #logging.info("soup retrieved for page %d" % page)
@@ -58,11 +64,92 @@ def get_project_soups(currentUrl, reqsession, output_type, projectID):
                 #logging.info("total: %d" % total)
             page += 1
         else:
+            logging.info(response)
             logging.info(response.status_code)
             logging.info("Service unavailable, waiting 10 seconds and trying again")
             time.sleep(10)
             continue
+    if len(souplist) > 5:
+        logging.info("retrieved %d soups for project %s" % (len(souplist), grant_num))
     return souplist
+
+#TOO heavy on the API
+'''def get_projectID(currentUrl, reqsession, acronym):
+
+    response = reqsession.get(currentUrl + 'projects', params={'acronym': acronym})
+    if response.status_code == 200:
+        soup = BeautifulSoup(response.content, 'lxml')
+        #find grant number
+        projectID = int(soup.find("code").text)
+        #logging.info("acronym %s for grant number %d" % (acronym, projectID))
+        response.close()
+        return projectID
+    else:
+        logging.info(response)
+        logging.info(response.status_code)
+        logging.info("Service unavailable")
+'''
+
+def enrich_grant_num_neo4j(graph, reqsession, bulkURL):
+    '''
+    Enriches neo4j project nodes with grant number information
+    '''
+    total_dict = dict() #resulting dictionary
+    response = reqsession.get(bulkURL, params={'verb': 'ListRecords', 'metadataPrefix': 'oaf', 'set': 'ECProjects'})
+    first_soup = BeautifulSoup(response.content, 'lxml')
+    resumption_token = get_res_token(first_soup)
+    add_grant_num_property(first_soup, graph)
+    logging.info('First resumption token is %s' % resumption_token)
+
+    while resumption_token != 'None':
+        #response = reqsession.get(bulkURL, params={'verb': 'ListRecords', 'resumptionToken' : resumption_token})
+        response = reqsession.get(bulkURL + '?verb=ListRecords&resumptionToken=' + resumption_token)
+        #logging.info('Next response is %s' % response)
+        soup = BeautifulSoup(response.content, 'lxml')
+        resumption_token = get_res_token(soup)
+        logging.info('Next resumption token is %s' % resumption_token)
+        add_grant_num_property(soup, graph)
+
+def add_grant_num_property(soup, graph):
+    '''A utility function, which adds project grant number to each node in Neo4j graph and commits the related transaction to the database
+
+    Args:
+
+    '''
+    results = soup.find_all(re.compile("^oaf:project"))
+    resultdict = dict()
+    for result in results:
+        acronym =  result.find('acronym').text.upper()
+        grant_num =  result.find('code').text
+        #logging.info("Searching for project %s with grant number %s " % (acronym, grant_num))
+        matcher = NodeMatcher(graph)
+        neo_node = matcher.match("Project", acronym=acronym).first()
+        #logging.info(neo_node)
+        if neo_node:
+        #neo_node = graph.nodes.get(v['gid']) where acronym=acronym
+            graph.merge(neo_node)
+            neo_node["grant_num"] = grant_num
+            graph.push(neo_node)
+            #logging.info("Project %s with grant number %s is updated in neo4j" % (neo_node['acronym'], neo_node['grant_num']))
+        else:
+            logging.info("Project %s is not found in neo4j" % acronym)
+
+def get_res_token(soup):
+    '''A utility function, which extracts resumption token from XML, returns a string containing resumption token
+    Args:
+        soup (XML string): contains string formatted in XML, that was obtained from BeautifulSoup request to the API
+    '''
+
+    with open('current_soup.txt', 'w',  encoding="utf-8") as f:
+            f.write(str(soup))
+    res_token = soup.find(re.compile("^oai:resumptiontoken"))
+    #print(str(res_token))
+    if res_token:
+        res_token_str = res_token.text
+        res_token_str = res_token_str.replace(' ', '%20')
+        return res_token_str
+    else:
+        return 'None'
 
 def get_results_from_soups(souplist):
     ''' Extracts string from all BeautifulSoup objects and merges them into one list
@@ -78,121 +165,3 @@ def get_results_from_soups(souplist):
         soupresults = soup.find_all("oaf:result")
         resultlist = resultlist + soupresults
     return resultlist
-
-'''
-def get_soup_contents(currentUrl, reqsession, output_type, resumption_token):
-
-    for x in range(0, 9):
-        #requests.get(url, params={'metadataPrefix':'oaf', 'set':output_type})
-        #pdb.set_trace()
-        if resumption_token == 'None' or resumption_token == 'First request':
-            response = reqsession.get(currentUrl, params={'verb': 'ListRecords', 'metadataPrefix': 'oaf', 'set': output_type})
-            logging.info("No resumptionToken")
-        else:
-            logging.info("resumptionToken is there ")
-            #response = reqsession.get(currentUrl, params={'verb': 'ListRecords', 'metadataPrefix': 'oaf', 'set': output_type, 'resumptionToken': resumption_token})
-            #resumptionToken as a parameter does not work for requests call, hence use string request
-            requeststr = currentUrl + '?verb=ListRecords&resumptionToken=' + resumption_token
-            logging.info(requeststr)
-            response = reqsession.get(requeststr)
-        if response.status_code == 200:
-            soup = BeautifulSoup(response.content, 'lxml')
-            response.close()
-            return soup
-        else:
-            logging.info(response.status_code)
-            logging.info("Service unavailable, waiting 10 seconds and trying again")
-            time.sleep(10)
-            continue
-
-def add_linkages_to_neo(record, output_type, graph):
-
-    cypherquery = " MATCH (b:Project),(a:Dataset) WHERE a.id = %s AND ID(b) = %s CREATE (b)-[r:hasDataset]->(a) RETURN r" % (project_codes, record['id'])
-
-    graph.run(cypherquery)
-
-def find_project_in_db(in_project_code, db_session):
-
-    records = db_session \
-                     .query(openaire_orm.ECProjectRecord) \
-                     .filter_by(project_code=in_project_code)
-
-    #pdb.set_trace()
-
-    try:
-        return records[0]
-    except IndexError:
-        return None
-
-def write_records_to_db(records, output_type, db_session):
-
-    if output_type == "software":
-        is_software = True
-    else:
-        is_software = False
-    #iterate through records
-    for record in records:
-
-        #create object
-        record_obj = get_record_object(record, output_type)
-
-        #if software, find related EC projects and create relationship with related ECprojects via association table
-        if is_software:
-            record_obj = link_record_with_project(record, record_obj, db_session)
-
-        #add object into database
-        local_object = db_session.merge(record_obj)
-        db_session.add(local_object)
-
-        db_session.commit()
-
-def get_record_object(cur_record, output_type):
-
-    if output_type == 'software':
-        return openaire_orm.SoftwareRecord(title=cur_record['title'], pid=cur_record['pid'], creators=str(cur_record['creators']) )
-    if output_type == 'ECProjects':
-        return openaire_orm.ECProjectRecord(title=cur_record['title'], project_code=cur_record['project_code'])
-
-def parse_soft (cur_soup):
-    output_list = list()
-    results = cur_soup.find_all(re.compile("^oaf:result"))
-
-    return [{'project_codes': r.find('code'),
-         'pid': r.find('pid').text,
-         'title': r.find('title').text,
-         'creators': r.find_all('creators'),}
-         for r in results
-         if r.find_all('code')] #if code tag exists, then it is related to EC project
-
-def parse_proj (cur_soup):
-
-    output_list = list()
-    results = cur_soup.find_all(re.compile("^oaf:project"))
-
-    return [{'title': r.find('title').text,
-         'project_code': r.find('code').text}
-         for r in results]
-
-def parse_datasets (cur_soup):
-    output_list = list()
-    results = cur_soup.find_all(re.compile("^oaf:result"))
-
-    return [{'project_codes': r.find('code').text,
-        'title': r.find('title').text,
-        'pid': r.find('pid').text,}
-         for r in results
-         if r.find_all('code')] #if code tag exists, then it is related to EC project
-
-def get_res_token(soup):
-    with open('current_soup.txt', 'w',  encoding="utf-8") as f:
-            f.write(str(soup))
-    res_token = soup.find(re.compile("^oai:resumptiontoken"))
-
-    if res_token:
-        res_token_str = res_token.text
-        res_token_str = res_token_str.replace(' ', '%20')
-        res_token_str = res_token_str.replace('"', '%22')
-        return res_token_str
-    else:
-        return 'None'
-'''
