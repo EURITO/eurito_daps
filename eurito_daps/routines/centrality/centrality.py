@@ -12,6 +12,7 @@ from eurito_daps.packages.utils import centrality_utils
 from nesta.core.orms.orm_utils import graph_session
 
 import igraph as ig
+from py2neo import Graph as pgraph
 import luigi
 import datetime
 import os
@@ -63,7 +64,6 @@ class CalcCentralityTask(luigi.Task):
 
     def run(self):
 
-        # Get connection settings
         conf = get_config('neo4j.config', 'neo4j')
         gkwargs = dict(host=conf['host'], secure=True,
                        auth=(conf['user'], conf['password']))
@@ -71,32 +71,18 @@ class CalcCentralityTask(luigi.Task):
         igr = ig.Graph()
         with graph_session(**gkwargs) as tx:
             graph = tx.graph
-            logging.info('getting relationships list')
-            all_rels = list(graph.relationships.match().limit(30000) ) #finds all relationships in a graph
-
-            #create tuple list (edgelist)
-            logging.info("found %d relationships" % len(all_rels))
+            all_rels = list(graph.relationships.match() ) #finds all relationships in a graph
             tuplelist = list()
+            
             for index,rel in enumerate(all_rels):
-                if index % 1000 == 0:
-                    print (index)
-                #what is a better way of changing the main graph
-                start_index, igr = centrality_utils.get_index(rel.start_node, graph, igr)
-                target_index, igr = centrality_utils.get_index(rel.end_node, graph, igr)
-                rel_tuple = (start_index, target_index)
+                rel_tuple = (rel.start_node.identity, rel.end_node.identity)
                 tuplelist.append(rel_tuple)
 
-            igr.add_edges(tuplelist)
+            newgraph = igr.TupleList(tuplelist)
 
-            density = igr.density(loops=False)
+            betw_list = newgraph.betweenness(vertices=None, directed=False, cutoff=3, weights=None, nobigint=True)
 
-            logging.info("density:", density)
-
-            betw = igr.betweenness(vertices=None, directed=False, cutoff=3, weights=None, nobigint=True)
-
-            logging.info("betweenness:", betw)
-
-            centrality_utils.add_betw_property(graph, igr, betw)
+            centrality_utils.add_betw_property(graph, newgraph, betw_list)
 
 
         logging.debug('Writing to DB complete')
